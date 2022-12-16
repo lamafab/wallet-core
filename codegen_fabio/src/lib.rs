@@ -1,7 +1,9 @@
 #[cfg(test)]
 mod tests;
 
-enum Error {}
+enum Error {
+    Todo,
+}
 type Result<T> = std::result::Result<T, Error>;
 
 enum AST {
@@ -266,14 +268,17 @@ struct Walker<R: Read> {
 }
 
 impl<R: Read> Walker<R> {
-    fn read_until(&mut self, token: char) -> &str {
+    fn read_until_fn<F>(&mut self, custom: F) -> &str
+    where
+        F: Fn(char) -> bool,
+    {
         let buffer = self.reader.fill_buf().unwrap();
         let decoded = str::from_utf8(buffer).unwrap();
 
         let mut completed = false;
         let mut to_take = 1;
         for char in decoded.chars() {
-            if char == token {
+            if custom(char) {
                 completed = true;
                 break;
             }
@@ -287,19 +292,61 @@ impl<R: Read> Walker<R> {
 
         &decoded[..to_take]
     }
-    fn ensure_space(&mut self) {
-        todo!()
-    }
-    fn ensure_semicolon(&mut self) {
-        todo!()
+    fn read_until(&mut self, token: char) -> &str {
+        self.read_until_fn(|char| char == token)
     }
     fn read_until_non_alphanumeric(&mut self) -> &str {
-        todo!()
+        self.read_until_fn(|char| !char.is_alphanumeric())
     }
     fn read_until_separator(&mut self) -> &str {
-        todo!()
+        self.read_until_fn(|char| char == ' ' || char == '\n')
+    }
+    fn ensure_fn<F>(&mut self, custom: F, ensure: EnsureVariant) -> Result<usize>
+    where
+        F: Fn(char) -> bool,
+    {
+        let buffer = self.reader.fill_buf().unwrap();
+        let decoded = str::from_utf8(buffer).unwrap();
+
+        let mut counter = 0;
+        for char in decoded.chars() {
+            if !custom(char) {
+                return Err(Error::Todo);
+            }
+
+            counter += 1;
+
+            if let EnsureVariant::Exactly(exact) = ensure {
+                if exact == counter {
+                    return Ok(counter);
+                }
+            }
+        }
+
+        if let EnsureVariant::AtLeast(at_least) = ensure {
+            if counter >= at_least {
+                return Ok(counter);
+            }
+        }
+
+        Err(Error::Todo)
+    }
+    fn ensure_space(&mut self) -> Result<()> {
+        let amt = self.ensure_fn(|char| char == ' ', EnsureVariant::AtLeast(1))?;
+        self.reader.consume(amt);
+        Ok(())
+    }
+    fn ensure_semicolon(&mut self) -> Result<()> {
+        let amt = self.ensure_fn(|char| char == ';', EnsureVariant::Exactly(1))?;
+        self.reader.consume(amt);
+        Ok(())
     }
     fn next(&mut self) {
         self.reader.consume(self.last_read_amt);
     }
+}
+
+enum EnsureVariant {
+    AtLeast(usize),
+    Exactly(usize),
 }
