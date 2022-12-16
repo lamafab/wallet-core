@@ -131,13 +131,14 @@ impl Driver for Function {
         walker.next();
 
         // Expect space.
-        walker.ensure_space();
+        walker.ensure_space()?;
 
         // Check for possible markers, function name and function params.
         let mut markers = vec![];
         let name;
         let params;
 
+        // TODO: Comment on behavior
         loop {
             if let Ok(f) = FunctionParams::drive(walker) {
                 name = f.name;
