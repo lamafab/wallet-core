@@ -14,6 +14,7 @@ enum AST {
     Function,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
 enum Primitive {
     Char,
     UnsignedChar,
@@ -181,11 +182,12 @@ impl Driver for Primitive {
     type Parsed = Primitive;
 
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
-        let word = walker.read_until_non_alphanumeric()?;
+        let word = walker.read_until_separator()?;
 
         let primitive = match word {
             "unsigned" => {
                 walker.next();
+                walker.ensure_space()?;
 
                 if let Ok(primitive) = Primitive::drive(walker) {
                     match primitive {
@@ -203,6 +205,7 @@ impl Driver for Primitive {
             }
             "signed" => {
                 walker.next();
+                walker.ensure_space()?;
 
                 if let Ok(primitive) = Primitive::drive(walker) {
                     match primitive {
@@ -220,6 +223,7 @@ impl Driver for Primitive {
             "int" => Primitive::Int,
             "short" => Primitive::Short,
             "long" => Primitive::Long,
+            "bool" => Primitive::Bool,
             _ => todo!(),
         };
 
@@ -276,7 +280,7 @@ impl<R: Read> Walker<R> {
             last_read_amt: 0,
         }
     }
-    fn read_until_fn<F>(&mut self, custom: F) -> Result<&str>
+    fn read_until_fn<F>(&mut self, custom: F, eof_ok: bool) -> Result<&str>
     where
         F: Fn(char) -> bool,
     {
@@ -294,7 +298,7 @@ impl<R: Read> Walker<R> {
             counter += 1;
         }
 
-        if !completed {
+        if !eof_ok && !completed {
             return Err(Error::Eof);
         }
 
@@ -303,13 +307,15 @@ impl<R: Read> Walker<R> {
         Ok(&decoded[..counter])
     }
     fn read_until(&mut self, token: char) -> Result<&str> {
-        self.read_until_fn(|char| char == token)
+        self.read_until_fn(|char| char == token, false)
     }
+    // TODO: Is this needed?
     fn read_until_non_alphanumeric(&mut self) -> Result<&str> {
-        self.read_until_fn(|char| !char.is_alphanumeric())
+        self.read_until_fn(|char| !char.is_alphanumeric(), false)
     }
+    // TODO: Write more tests for this.
     fn read_until_separator(&mut self) -> Result<&str> {
-        self.read_until_fn(|char| char == ' ' || char == '\n')
+        self.read_until_fn(|char| char == ' ' || char == '\n', true)
     }
     fn ensure_fn<F>(&mut self, custom: F, ensure: EnsureVariant) -> Result<usize>
     where
@@ -351,13 +357,16 @@ impl<R: Read> Walker<R> {
         self.reader.consume(amt);
         Ok(())
     }
+    // TODO: Is this needed?
     fn ensure_newline(&mut self) -> Result<()> {
         let amt = self.ensure_fn(|char| char == '\n', EnsureVariant::AtLeast(1))?;
         self.reader.consume(amt);
         Ok(())
     }
+    // TODO: Test multiple calls.
     fn next(&mut self) {
         self.reader.consume(self.last_read_amt);
+        self.last_read_amt = 0;
     }
 }
 
