@@ -10,8 +10,26 @@ enum AST {
 struct Primitive;
 struct Typedef;
 struct Include;
-struct Function;
 struct Other;
+// TODO: Rename this
+struct FunctionParams;
+
+enum Type {
+    Primitive(Primitive),
+    Custom(Other),
+}
+
+struct Function {
+    name: String,
+    params: Vec<FunctionParam>,
+    return_ty: Type,
+}
+
+struct FunctionParam {
+    name: String,
+    ty: (),
+    markers: Vec<()>,
+}
 
 trait Driver {
     type Parsed;
@@ -19,24 +37,49 @@ trait Driver {
     fn drive<R: Read>(_: &mut Walker<R>) -> Result<Self::Parsed>;
 }
 
+impl Driver for FunctionParams {
+    type Parsed = Vec<FunctionParam>;
+
+    fn drive<R: Read>(_: &mut Walker<R>) -> Result<Self::Parsed> {
+        todo!()
+    }
+}
+
 impl Driver for Function {
     type Parsed = ();
 
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
-        let keyword = walker.read_keyword();
+        let return_ty = if let Ok(primitive) = Primitive::drive(walker) {
+            Type::Primitive(primitive)
+        } else if let Ok(other) = Other::drive(walker) {
+            Type::Custom(other)
+        } else {
+            panic!()
+        };
 
-        if let Ok(x) = Primitive::drive(walker) {
+        walker.next();
+        walker.ensure_space();
 
-        } else if let Ok(x) = Other::drive(walker) {
+        let mut markers = vec![];
+        let params;
 
+        loop {
+            if let Ok(p) = FunctionParams::drive(walker) {
+                params = p;
+                break;
+            } else if let Ok(other) = Other::drive(walker) {
+                markers.push(other);
+            }
         }
+
+        walker.next();
 
         todo!()
     }
 }
 
 impl Driver for Other {
-    type Parsed = ();
+    type Parsed = Other;
 
     fn drive<R: Read>(_: &mut Walker<R>) -> Result<Self::Parsed> {
         todo!()
@@ -44,7 +87,7 @@ impl Driver for Other {
 }
 
 impl Driver for Primitive {
-    type Parsed = ();
+    type Parsed = Primitive;
 
     fn drive<R: Read>(_: &mut Walker<R>) -> Result<Self::Parsed> {
         todo!()
@@ -55,18 +98,18 @@ impl Driver for AST {
     type Parsed = ParsedAST;
 
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
-        let keyword = walker.read_keyword();
-        let amt_read = keyword.len();
+        let token = walker.read_until_separator();
+        let amt_read = token.len();
 
-        match keyword {
+        match token {
             "#pragma" => {
                 todo!()
-            },
+            }
             "include" => {
                 todo!()
             }
             _ => {
-                walker.consume(amt_read);
+                walker.next();
 
                 if let Ok(_parsed) = Function::drive(walker) {
                     Ok(ParsedAST::Function)
@@ -74,31 +117,32 @@ impl Driver for AST {
                     // TODO: Error
                     todo!()
                 }
-            },
+            }
         }
     }
 }
 
 enum ParsedAST {
-    Function
+    Function,
 }
 
-use std::io::{Read, BufRead, BufReader};
+use std::io::{BufRead, BufReader, Read};
 use std::str;
 
 struct Walker<R: Read> {
     reader: BufReader<R>,
+    last_read_amt: usize,
 }
 
 impl<R: Read> Walker<R> {
-    fn read_keyword(&mut self) -> &str {
+    fn read_until(&mut self, token: char) -> &str {
         let buffer = self.reader.fill_buf().unwrap();
         let decoded = str::from_utf8(buffer).unwrap();
 
         let mut completed = false;
         let mut to_take = 1;
         for char in decoded.chars() {
-            if char != ' ' || char != '\n' {
+            if char == token {
                 completed = true;
                 break;
             }
@@ -112,31 +156,16 @@ impl<R: Read> Walker<R> {
 
         &decoded[..to_take]
     }
-    fn read_until(&mut self, chars: &[char]) -> &str {
-        let buffer = self.reader.fill_buf().unwrap();
-        let decoded = str::from_utf8(buffer).unwrap();
-
-        let mut completed = false;
-        let mut to_take = 1;
-        for char in decoded.chars() {
-            if chars.contains(&char) {
-                completed = true;
-                break;
-            }
-
-            to_take += 1;
-        }
-
-        if !completed {
-            // TODO: Error
-        }
-
-        &decoded[..to_take]
-    }
-    fn consume(&mut self, amt: usize) {
-        self.reader.consume(amt);
-    }
-    fn read_parentheses(&mut self) -> &str {
+    fn ensure_space(&mut self) {
         todo!()
+    }
+    fn read_until_non_alphanumeric(&mut self) {
+        todo!()
+    }
+    fn read_until_separator(&mut self) -> &str {
+        todo!()
+    }
+    fn next(&mut self) {
+        self.reader.consume(self.last_read_amt);
     }
 }
