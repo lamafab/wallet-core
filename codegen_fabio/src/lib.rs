@@ -1,9 +1,10 @@
 #[cfg(test)]
 mod tests;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 enum Error {
     Todo,
+    Eof,
 }
 type Result<T> = std::result::Result<T, Error>;
 
@@ -72,7 +73,7 @@ impl Driver for Type {
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
         let ty = if let Ok(primitive) = Primitive::drive(walker) {
             Type::Primitive(primitive)
-        } else if walker.read_until_separator() == "struct" {
+        } else if walker.read_until_separator()? == "struct" {
             walker.next();
             Type::Struct(Struct::drive(walker)?)
         } else if let Ok(other) = Other::drive(walker) {
@@ -180,7 +181,7 @@ impl Driver for Primitive {
     type Parsed = Primitive;
 
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
-        let word = walker.read_until_non_alphanumeric();
+        let word = walker.read_until_non_alphanumeric()?;
 
         let primitive = match word {
             "unsigned" => {
@@ -232,7 +233,7 @@ impl Driver for AST {
     type Parsed = ParsedAST;
 
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
-        let token = walker.read_until_separator();
+        let token = walker.read_until_separator()?;
         let amt_read = token.len();
 
         match token {
@@ -275,7 +276,7 @@ impl<R: Read> Walker<R> {
             last_read_amt: 0,
         }
     }
-    fn read_until_fn<F>(&mut self, custom: F) -> &str
+    fn read_until_fn<F>(&mut self, custom: F) -> Result<&str>
     where
         F: Fn(char) -> bool,
     {
@@ -294,20 +295,20 @@ impl<R: Read> Walker<R> {
         }
 
         if !completed {
-            // TODO: Error
+            return Err(Error::Eof);
         }
 
         self.last_read_amt = counter;
 
-        &decoded[..counter]
+        Ok(&decoded[..counter])
     }
-    fn read_until(&mut self, token: char) -> &str {
+    fn read_until(&mut self, token: char) -> Result<&str> {
         self.read_until_fn(|char| char == token)
     }
-    fn read_until_non_alphanumeric(&mut self) -> &str {
+    fn read_until_non_alphanumeric(&mut self) -> Result<&str> {
         self.read_until_fn(|char| !char.is_alphanumeric())
     }
-    fn read_until_separator(&mut self) -> &str {
+    fn read_until_separator(&mut self) -> Result<&str> {
         self.read_until_fn(|char| char == ' ' || char == '\n')
     }
     fn ensure_fn<F>(&mut self, custom: F, ensure: EnsureVariant) -> Result<usize>
@@ -320,7 +321,7 @@ impl<R: Read> Walker<R> {
         let mut counter = 0;
         for char in decoded.chars() {
             if !custom(char) {
-                return Err(Error::Todo);
+                break;
             }
 
             counter += 1;
