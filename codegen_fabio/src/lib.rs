@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests;
 
+#[derive(Debug, Clone)]
 enum Error {
     Todo,
 }
@@ -268,6 +269,12 @@ struct Walker<R: Read> {
 }
 
 impl<R: Read> Walker<R> {
+    pub fn new(reader: R) -> Self {
+        Walker {
+            reader: BufReader::new(reader),
+            last_read_amt: 0,
+        }
+    }
     fn read_until_fn<F>(&mut self, custom: F) -> &str
     where
         F: Fn(char) -> bool,
@@ -276,21 +283,23 @@ impl<R: Read> Walker<R> {
         let decoded = str::from_utf8(buffer).unwrap();
 
         let mut completed = false;
-        let mut to_take = 1;
+        let mut counter = 0;
         for char in decoded.chars() {
             if custom(char) {
                 completed = true;
                 break;
             }
 
-            to_take += 1;
+            counter += 1;
         }
 
         if !completed {
             // TODO: Error
         }
 
-        &decoded[..to_take]
+        self.last_read_amt = counter;
+
+        &decoded[..counter]
     }
     fn read_until(&mut self, token: char) -> &str {
         self.read_until_fn(|char| char == token)
@@ -338,6 +347,11 @@ impl<R: Read> Walker<R> {
     }
     fn ensure_semicolon(&mut self) -> Result<()> {
         let amt = self.ensure_fn(|char| char == ';', EnsureVariant::Exactly(1))?;
+        self.reader.consume(amt);
+        Ok(())
+    }
+    fn ensure_newline(&mut self) -> Result<()> {
+        let amt = self.ensure_fn(|char| char == '\n', EnsureVariant::Exactly(1))?;
         self.reader.consume(amt);
         Ok(())
     }
