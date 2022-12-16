@@ -7,7 +7,19 @@ enum AST {
     Function,
 }
 
-struct Primitive;
+enum Primitive {
+    Char,
+    UnsignedChar,
+    SignedChar,
+    Int,
+    UnsignedInt,
+    Short,
+    UnsignedShort,
+    Long,
+    UnsignedLong,
+    Bool,
+}
+
 struct Typedef;
 struct Include;
 struct Other;
@@ -19,7 +31,7 @@ struct FunctionParams {
 
 enum Marker {
     Recognized(SpecialMarker),
-    Other(Other)
+    Other(Other),
 }
 
 impl Driver for Marker {
@@ -30,9 +42,7 @@ impl Driver for Marker {
     }
 }
 
-enum SpecialMarker {
-
-}
+enum SpecialMarker {}
 
 enum Type {
     Primitive(Primitive),
@@ -95,6 +105,8 @@ impl Driver for Function {
                 break;
             } else if let Ok(other) = Marker::drive(walker) {
                 markers.push(other);
+            } else {
+                panic!()
             }
         }
 
@@ -109,13 +121,11 @@ impl Driver for Function {
         // Expect semicolon.
         walker.ensure_semicolon();
 
-        Ok(
-            Function {
-                name,
-                params,
-                return_ty,
-            }
-        )
+        Ok(Function {
+            name,
+            params,
+            return_ty,
+        })
     }
 }
 
@@ -130,8 +140,40 @@ impl Driver for Other {
 impl Driver for Primitive {
     type Parsed = Primitive;
 
-    fn drive<R: Read>(_: &mut Walker<R>) -> Result<Self::Parsed> {
-        todo!()
+    fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
+        let word = walker.read_until_non_alphanumeric();
+
+        let primitive = match word {
+            "unsigned" => {
+                if let Ok(primitive) = Primitive::drive(walker) {
+                    match primitive {
+                        Primitive::Char => Primitive::UnsignedChar,
+                        Primitive::Int => Primitive::UnsignedInt,
+                        Primitive::Short => Primitive::UnsignedShort,
+                        Primitive::Long => Primitive::UnsignedLong,
+                        _ => todo!(),
+                    }
+                } else {
+                    panic!()
+                }
+            }
+            "signed" => {
+                if let Ok(primitive) = Primitive::drive(walker) {
+                    primitive
+                } else {
+                    panic!()
+                }
+            }
+            "char" => Primitive::Char,
+            "int" => Primitive::Int,
+            "short" => Primitive::Short,
+            "long" => Primitive::Long,
+            _ => todo!(),
+        };
+
+        walker.next();
+
+        Ok(primitive)
     }
 }
 
@@ -203,7 +245,7 @@ impl<R: Read> Walker<R> {
     fn ensure_semicolon(&mut self) {
         todo!()
     }
-    fn read_until_non_alphanumeric(&mut self) {
+    fn read_until_non_alphanumeric(&mut self) -> &str {
         todo!()
     }
     fn read_until_separator(&mut self) -> &str {
