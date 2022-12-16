@@ -159,7 +159,7 @@ impl Driver for Function {
         }
 
         // Expect semicolon.
-        walker.ensure_semicolon();
+        walker.ensure_one_semicolon();
 
         Ok(Function {
             name,
@@ -346,13 +346,13 @@ impl<R: Read> Walker<R> {
         self.reader.consume(amt);
         Ok(())
     }
-    fn ensure_semicolon(&mut self) -> Result<()> {
+    fn ensure_one_semicolon(&mut self) -> Result<()> {
         let amt = self.ensure_fn(|char| char == ';', EnsureVariant::Exactly(1))?;
         self.reader.consume(amt);
         Ok(())
     }
     fn ensure_newline(&mut self) -> Result<()> {
-        let amt = self.ensure_fn(|char| char == '\n', EnsureVariant::Exactly(1))?;
+        let amt = self.ensure_fn(|char| char == '\n', EnsureVariant::AtLeast(1))?;
         self.reader.consume(amt);
         Ok(())
     }
