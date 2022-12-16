@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 enum Error {}
 type Result<T> = std::result::Result<T, Error>;
 
