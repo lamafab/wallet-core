@@ -10,7 +10,6 @@ enum AST {
 enum Primitive {
     Char,
     UnsignedChar,
-    SignedChar,
     Int,
     UnsignedInt,
     Short,
@@ -44,9 +43,42 @@ impl Driver for Marker {
 
 enum SpecialMarker {}
 
+struct Struct(String);
+
+impl Driver for Struct {
+    type Parsed = Self;
+
+    fn drive<R: Read>(_: &mut Walker<R>) -> Result<Self::Parsed> {
+        todo!()
+    }
+}
+
+// TODO: Handle pointers.
 enum Type {
     Primitive(Primitive),
+    Struct(Struct),
     Custom(Other),
+}
+
+impl Driver for Type {
+    type Parsed = Self;
+
+    fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
+        let ty = if let Ok(primitive) = Primitive::drive(walker) {
+            Type::Primitive(primitive)
+        } else if walker.read_until_separator() == "struct" {
+            walker.next();
+            Type::Struct(Struct::drive(walker)?)
+        } else if let Ok(other) = Other::drive(walker) {
+            Type::Custom(other)
+        } else {
+            panic!()
+        };
+
+        walker.next();
+
+        Ok(ty)
+    }
 }
 
 struct Function {
@@ -108,9 +140,10 @@ impl Driver for Function {
             } else {
                 panic!()
             }
-        }
 
-        walker.next();
+            walker.next();
+            walker.ensure_space();
+        }
 
         // Check for possible marker
         if let Ok(marker) = Marker::drive(walker) {
@@ -145,12 +178,16 @@ impl Driver for Primitive {
 
         let primitive = match word {
             "unsigned" => {
+                walker.next();
+
                 if let Ok(primitive) = Primitive::drive(walker) {
                     match primitive {
                         Primitive::Char => Primitive::UnsignedChar,
                         Primitive::Int => Primitive::UnsignedInt,
                         Primitive::Short => Primitive::UnsignedShort,
                         Primitive::Long => Primitive::UnsignedLong,
+                        Primitive::Bool => panic!(),
+                        // Explicitly disallow all other.
                         _ => todo!(),
                     }
                 } else {
@@ -158,8 +195,16 @@ impl Driver for Primitive {
                 }
             }
             "signed" => {
+                walker.next();
+
                 if let Ok(primitive) = Primitive::drive(walker) {
-                    primitive
+                    match primitive {
+                        Primitive::Char | Primitive::Int | Primitive::Short | Primitive::Long => {
+                            primitive
+                        }
+                        // Explicitly disallow all other.
+                        _ => todo!(),
+                    }
                 } else {
                     panic!()
                 }
