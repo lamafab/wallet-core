@@ -30,6 +30,19 @@ fn read_until() {
 }
 
 #[test]
+fn read_until_token_first() {
+    let sample = " some ";
+    let mut walker = Walker::new(sample.as_bytes());
+
+    assert_eq!("", walker.read_until(' ').unwrap());
+    walker.next();
+    walker.ensure_space().unwrap();
+
+    assert_eq!("some", walker.read_until(' ').unwrap());
+    walker.next();
+}
+
+#[test]
 fn read_until_eof_erro() {
     let sample = "this is some data";
     let mut walker = Walker::new(sample.as_bytes());
