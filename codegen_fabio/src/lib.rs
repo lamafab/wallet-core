@@ -1,3 +1,4 @@
+mod converter;
 mod driver_impl;
 #[cfg(test)]
 mod tests;
@@ -74,7 +75,7 @@ enum SpecialMarker {}
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct Struct(String);
 
-// TODO: Handle pointers.
+// TODO: Handle pointers and consts.
 #[derive(Debug, Clone, Eq, PartialEq)]
 enum Type {
     Primitive(Primitive),
@@ -239,25 +240,29 @@ use std::fs::File;
 
 struct Engine {
     // TODO: Use `Path`
-    paths: Vec<String>
+    paths: Vec<String>,
 }
 
 impl Engine {
     // TODO: Take `Path` here.
     fn new_path(path: &str) -> Self {
         // TODO: Maybe should check whether the path actually exists.
-        Engine { paths: vec![path.to_string()] }
+        Engine {
+            paths: vec![path.to_string()],
+        }
     }
     fn start(&self) -> Result<()> {
         for path in &self.paths {
             let file = File::open(path).unwrap();
             let mut walker = Walker::new(file);
-            let x = AST::drive(&mut walker)?;
+            let ast = AST::drive(&mut walker)?;
 
-            dbg!(x);
+            dbg!(&ast);
+            let out = converter::rust::convert(&ast);
+            println!("{out}");
         }
 
-        panic!()
+        Ok(())
     }
 }
 
