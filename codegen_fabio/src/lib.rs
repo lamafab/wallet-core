@@ -13,9 +13,8 @@ enum Error {
 type Result<T> = std::result::Result<T, Error>;
 
 enum AST {
-    Include,
     Marker,
-    Function,
+    Function(Function),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -89,10 +88,6 @@ trait Driver {
     fn drive<R: Read>(_: &mut Walker<R>) -> Result<Self::Parsed>;
 }
 
-enum ParsedAST {
-    Function,
-}
-
 impl<'a> From<&'a str> for Walker<&'a [u8]> {
     fn from(buffer: &'a str) -> Self {
         Walker::new(buffer.as_bytes())
@@ -129,11 +124,11 @@ impl<R: Read> Walker<R> {
             counter += 1;
         }
 
+        self.last_read_amt = counter;
+
         if !eof_ok && !completed {
             return Err(Error::Eof);
         }
-
-        self.last_read_amt = counter;
 
         Ok(&decoded[..counter])
     }

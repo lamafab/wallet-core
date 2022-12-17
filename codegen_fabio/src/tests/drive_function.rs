@@ -28,7 +28,7 @@ fn drive_function_name_with_params() {
         FunctionNameWithParams::drive(&mut walker).unwrap()
     );
 
-    let sample = "some_func (  int\nmy_var,bool some  \n)";
+    let sample = "some_func (  int\nmy_var,\nbool some  \n)";
     let mut walker = Walker::from(sample);
     assert_eq!(
         expected,
@@ -73,7 +73,7 @@ fn drive_function_name_with_params_markers() {
 
 #[test]
 fn drive_function_full() {
-    let sample = "int* _NotNull some_func(int my_var, bool some);";
+    let sample = "int* _NotNull some_func(int my_var, bool some) OtherMarker ;";
     let mut walker = Walker::from(sample);
 
     let res = Function::drive(&mut walker).unwrap();
