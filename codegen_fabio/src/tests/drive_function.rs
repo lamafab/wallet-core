@@ -1,5 +1,5 @@
 use crate::{
-    Driver, Error, FunctionNameWithParams, FunctionParam, Other, Primitive, Struct, Type, Walker,
+    Driver, Error, FunctionNameWithParams, FunctionParam, Other, Primitive, Struct, Type, Walker, Function,
 };
 
 #[test]
@@ -43,4 +43,14 @@ fn drive_function_name_with_params() {
     let mut walker = Walker::from(sample);
     assert!(FunctionNameWithParams::drive(&mut walker).is_err());
 
+}
+
+
+#[test]
+fn drive_function_full() {
+    let sample = "int some_func(int my_var, bool some);";
+    let mut walker = Walker::from(sample);
+
+	let res = Function::drive(&mut walker).unwrap();
+	println!("{:?}", res);
 }

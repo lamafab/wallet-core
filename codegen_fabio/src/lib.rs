@@ -65,6 +65,7 @@ enum Type {
     Custom(Other),
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
 struct Function {
     name: String,
     params: Vec<FunctionParam>,

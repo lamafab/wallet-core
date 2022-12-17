@@ -68,10 +68,8 @@ impl Driver for FunctionNameWithParams {
             let _ = walker.ensure_separator();
 
             // Parameter type
-            let try_ty = walker.read_until_separator()?;
-            println!("TRY_TY: {try_ty}");
             let param_ty = {
-                let mut w = Walker::from(try_ty.trim());
+                let mut w = Walker::from(walker.read_until_separator()?.trim());
                 Type::drive(&mut w)?
             };
 
@@ -145,7 +143,9 @@ impl Driver for FunctionNameWithParams {
 			println!("CONTINUING");
         }
 
+		println!(">> TO EOF");
 		walker.ensure_eof()?;
+		println!(">> AFTER EOF");
 
         Ok(FunctionNameWithParams {
             name: function_name,
@@ -159,13 +159,10 @@ impl Driver for Function {
 
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
         // Parse return value.
-        let return_ty = if let Ok(primitive) = Primitive::drive(walker) {
-            Type::Primitive(primitive)
-        } else if let Ok(other) = Other::drive(walker) {
-            Type::Custom(other)
-        } else {
-            panic!()
-        };
+		let return_ty = {
+			let mut w = Walker::from(walker.read_until_separator()?);
+			Type::drive(&mut w)?
+		};
 
         walker.next();
 
@@ -179,9 +176,14 @@ impl Driver for Function {
 
         // TODO: Comment on behavior
         loop {
-            if let Ok(f) = FunctionNameWithParams::drive(walker) {
+			let x = walker.read_until(';')?;
+			println!("TO BE PARSED: {x}");
+			let mut w = Walker::from(x);
+
+            if let Ok(f) = FunctionNameWithParams::drive(&mut w) {
                 name = f.name;
                 params = f.params;
+				walker.next();
                 break;
             } else if let Ok(other) = Marker::drive(walker) {
                 markers.push(other);
@@ -189,18 +191,27 @@ impl Driver for Function {
                 panic!()
             }
 
-            walker.next();
-            walker.ensure_separator()?;
+			// TODO:
+            //walker.next();
+			// Wipe separator.
+            let _ = walker.ensure_separator();
         }
 
         // Check for possible marker
+		/*
         if let Ok(marker) = Marker::drive(walker) {
             markers.push(marker);
             walker.next();
         }
+		*/
+
+		let rest = walker.read_eof()?;
+		println!("REST: {rest}");
 
         // Expect semicolon.
+		println!(">> ENSURE ONE SEMI");
         walker.ensure_one_semicolon()?;
+		println!(">> AFTER ONE SEMI");
 
         Ok(Function {
             name,
