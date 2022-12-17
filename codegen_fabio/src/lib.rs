@@ -57,6 +57,7 @@ impl Driver for Marker {
 
 enum SpecialMarker {}
 
+#[derive(Debug, Clone, Eq, PartialEq)]
 struct Struct(String);
 
 impl Driver for Struct {
@@ -68,6 +69,7 @@ impl Driver for Struct {
 }
 
 // TODO: Handle pointers.
+#[derive(Debug, Clone, Eq, PartialEq)]
 enum Type {
     Primitive(Primitive),
     Struct(Struct),

@@ -1,6 +1,6 @@
 use crate::{
     Driver, Function, FunctionParam, FunctionParams, Marker, Other, ParsedAST, Primitive, Result,
-    Struct, Type, Walker, AST,
+    Struct, Type, Walker, AST, Error,
 };
 use std::io::{BufRead, BufReader, Read};
 use std::str;
@@ -151,7 +151,7 @@ impl Driver for Primitive {
             "short" => Primitive::Short,
             "long" => Primitive::Long,
             "bool" => Primitive::Bool,
-            _ => todo!(),
+            _ => return Err(Error::Todo),
         };
 
         walker.next();
