@@ -3,6 +3,7 @@ mod driver_impl;
 #[cfg(test)]
 mod tests;
 
+use std::fmt::Display;
 use std::io::{BufRead, BufReader, Read};
 use std::{str, vec};
 
@@ -54,7 +55,12 @@ struct Include;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct Other(String);
-// TODO: Rename this
+
+impl Display for Other {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct FunctionNameWithParams {
@@ -74,6 +80,12 @@ enum SpecialMarker {}
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct Struct(String);
+
+impl Display for Struct {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 // TODO: Handle pointers and consts.
 #[derive(Debug, Clone, Eq, PartialEq)]
