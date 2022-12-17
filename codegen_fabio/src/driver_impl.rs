@@ -17,8 +17,8 @@ fn valid_var_name(name: &str) -> bool {
     }
 
     // Check for valid characters.
-    name.chars()
-        .any(|char| !char.is_ascii_alphanumeric() || (char != ' ' && char != '-'))
+    !name.chars()
+        .any(|char| !char.is_ascii_alphanumeric() && (char != '_' && char != '-'))
 }
 
 impl Driver for Type {
@@ -60,6 +60,9 @@ impl Driver for FunctionNameWithParams {
         // Parse parameters
         let mut params = vec![];
         loop {
+            // Wipe separators.
+            let _ = walker.ensure_separator();
+
             // Parameter type
             let try_ty = walker.read_until_separator()?;
             println!("TRY_TY: {try_ty}");
