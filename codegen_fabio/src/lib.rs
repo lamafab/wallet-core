@@ -147,6 +147,9 @@ impl<R: Read> Walker<R> {
     fn read_until_separator(&mut self) -> Result<&str> {
         self.read_until_fn(|char| char == ' ' || char == '\n', true)
     }
+    fn read_eof(&mut self) -> Result<&str> {
+        self.read_until_fn(|char| false, true)
+    }
     fn ensure_consume_fn<F>(&mut self, custom: F, ensure: EnsureVariant) -> Result<usize>
     where
         F: Fn(char) -> bool,
@@ -185,6 +188,14 @@ impl<R: Read> Walker<R> {
         }
 
         Err(Error::Todo)
+    }
+    fn ensure_eof(&mut self) -> Result<()> {
+        let read = self.read_until_fn(|_| false, true)?;
+        if read.is_empty() {
+            Ok(())
+        } else {
+            Err(Error::Todo)
+        }
     }
     fn ensure_space(&mut self) -> Result<()> {
         let amt = self.ensure_fn(|char| char == ' ', EnsureVariant::AtLeast(1))?;

@@ -219,19 +219,16 @@ impl Driver for Primitive {
                 walker.next();
                 walker.ensure_separator()?;
 
-                if let Ok(primitive) = Primitive::drive(walker) {
-                    match primitive {
-                        Primitive::Char => Primitive::UnsignedChar,
-                        Primitive::Int => Primitive::UnsignedInt,
-                        Primitive::Short => Primitive::UnsignedShort,
-                        Primitive::Long => Primitive::UnsignedLong,
-                        Primitive::Bool => panic!(),
-                        // Explicitly disallow all other.
-                        _ => todo!(),
-                    }
-                } else {
-                    panic!()
-                }
+				let primitive = Primitive::drive(walker)?;
+				match primitive {
+					Primitive::Char => Primitive::UnsignedChar,
+					Primitive::Int => Primitive::UnsignedInt,
+					Primitive::Short => Primitive::UnsignedShort,
+					Primitive::Long => Primitive::UnsignedLong,
+					Primitive::Bool => panic!(),
+					// Explicitly disallow all other.
+					_ => todo!(),
+				}
             }
             "signed" => {
                 walker.next();
@@ -258,6 +255,7 @@ impl Driver for Primitive {
         };
 
         walker.next();
+		walker.ensure_eof()?;
 
         Ok(primitive)
     }
