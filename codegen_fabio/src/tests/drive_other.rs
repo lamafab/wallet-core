@@ -1,4 +1,4 @@
-use crate::{Driver, Error, Primitive, Walker, Other, Type};
+use crate::{Driver, Error, Primitive, Walker, Other, Type, Struct};
 
 #[test]
 fn drive_other() {
@@ -22,13 +22,16 @@ fn drive_other() {
 
 #[test]
 fn drive_type() {
-    let sample = "int unsigned char some-data bool";
+    let sample = "int unsigned char struct MyStruct some-data bool";
     let mut walker = Walker::new(sample.as_bytes());
 
 	assert_eq!(Type::Primitive(Primitive::Int), Type::drive(&mut walker).unwrap());
     walker.ensure_space().unwrap();
 
 	assert_eq!(Type::Primitive(Primitive::UnsignedChar), Type::drive(&mut walker).unwrap());
+    walker.ensure_space().unwrap();
+
+	assert_eq!(Type::Struct(Struct("MyStruct".to_string())), Type::drive(&mut walker).unwrap());
     walker.ensure_space().unwrap();
 
 	assert_eq!(Type::Custom(Other("some-data".to_string())), Type::drive(&mut walker).unwrap());

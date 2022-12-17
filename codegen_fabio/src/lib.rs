@@ -60,14 +60,6 @@ enum SpecialMarker {}
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct Struct(String);
 
-impl Driver for Struct {
-    type Parsed = Self;
-
-    fn drive<R: Read>(_: &mut Walker<R>) -> Result<Self::Parsed> {
-        todo!()
-    }
-}
-
 // TODO: Handle pointers.
 #[derive(Debug, Clone, Eq, PartialEq)]
 enum Type {
@@ -179,6 +171,11 @@ impl<R: Read> Walker<R> {
     }
     fn ensure_space(&mut self) -> Result<()> {
         let amt = self.ensure_fn(|char| char == ' ', EnsureVariant::AtLeast(1))?;
+        self.reader.consume(amt);
+        Ok(())
+    }
+    fn ensure_separator(&mut self) -> Result<()> {
+        let amt = self.ensure_fn(|char| char == ' ' || char == '\n', EnsureVariant::AtLeast(1))?;
         self.reader.consume(amt);
         Ok(())
     }

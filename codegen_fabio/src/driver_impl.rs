@@ -48,8 +48,8 @@ impl Driver for Function {
 
         walker.next();
 
-        // Expect space.
-        walker.ensure_space()?;
+        // Expect separator.
+        walker.ensure_separator()?;
 
         // Check for possible markers, function name and function params.
         let mut markers = vec![];
@@ -69,7 +69,7 @@ impl Driver for Function {
             }
 
             walker.next();
-            walker.ensure_space()?;
+            walker.ensure_separator()?;
         }
 
         // Check for possible marker
@@ -93,6 +93,7 @@ impl Driver for Other {
     type Parsed = Other;
 
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
+		// TODO: Should just use `read_until_separator`.
         let keyword = walker.read_until_fn(
             |char| !char.is_ascii_alphanumeric() && char != '_' && char != '-',
             true,
@@ -114,7 +115,7 @@ impl Driver for Primitive {
         let primitive = match word {
             "unsigned" => {
                 walker.next();
-                walker.ensure_space()?;
+                walker.ensure_separator()?;
 
                 if let Ok(primitive) = Primitive::drive(walker) {
                     match primitive {
@@ -132,7 +133,7 @@ impl Driver for Primitive {
             }
             "signed" => {
                 walker.next();
-                walker.ensure_space()?;
+                walker.ensure_separator()?;
 
                 if let Ok(primitive) = Primitive::drive(walker) {
                     match primitive {
@@ -185,5 +186,31 @@ impl Driver for AST {
                 }
             }
         }
+    }
+}
+
+impl Driver for Struct {
+    type Parsed = Self;
+
+    fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
+		let prefix = walker.read_until_separator()?;
+
+		let strct = if prefix == "struct" {
+			walker.next();
+			walker.ensure_separator()?;
+
+			let name = walker.read_until_separator()?;
+			if !name.is_empty() {
+				Struct(name.to_string())
+			} else {
+				return Err(Error::Todo)
+			}
+		} else {
+			return Err(Error::Todo)
+		};
+
+		walker.next();
+
+		Ok(strct)
     }
 }
