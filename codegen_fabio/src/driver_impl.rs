@@ -22,41 +22,57 @@ fn valid_var_name(name: &str) -> bool {
         .any(|char| !char.is_ascii_alphanumeric() && (char != '_' && char != '-'))
 }
 
-impl Driver for CommentBlock {
-    type Parsed = Self;
+impl Driver for Function {
+    type Parsed = Function;
 
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
-        // TODO: Be stricter
-
-        let line = walker.read_eof()?.to_string();
-        if line.starts_with("///") {
-            walker.next();
-            walker.ensure_eof()?;
-            Ok(CommentBlock(line.replace("///", "").trim().to_string()))
-        } else {
-            Err(Error::Todo)
-        }
-    }
-}
-
-impl Driver for Type {
-    type Parsed = Self;
-
-    fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
-        let ty = if let Ok(primitive) = Primitive::drive(walker) {
-            Type::Primitive(primitive)
-        } else if walker.read_until_separator()? == "struct" {
-            Type::Struct(Struct::drive(walker)?)
-        } else if let Ok(other) = Other::drive(walker) {
-            Type::Custom(other)
-        } else {
-            return Err(Error::Todo);
+        // Parse return value.
+        let return_ty = {
+            let mut w = Walker::from(walker.read_until_separator()?);
+            Type::drive(&mut w)?
         };
 
         walker.next();
-        walker.ensure_eof()?;
 
-        Ok(ty)
+        // Expect separator.
+        walker.ensure_separator()?;
+
+        // Check for possible markers, function name and function params.
+        let mut markers = vec![];
+        let name;
+        let params;
+
+        // TODO: Comment on behavior
+        loop {
+            let mut w = Walker::from(walker.read_until(';')?);
+
+            if let Ok(f) = FunctionNameWithParams::drive(&mut w) {
+                name = f.name;
+                params = f.params;
+                walker.next();
+                break;
+            } else if let Ok(other) = Marker::drive(walker) {
+                markers.push(other);
+            } else {
+                panic!()
+            }
+
+            walker.next();
+            // Wipe separator.
+            let _ = walker.ensure_separator();
+        }
+
+        // Parse additional markers at the end of the function
+
+        // Expect semicolon.
+        walker.ensure_one_semicolon()?;
+
+        Ok(Function {
+            name,
+            params,
+            return_ty,
+            markers,
+        })
     }
 }
 
@@ -145,69 +161,24 @@ impl Driver for FunctionNameWithParams {
     }
 }
 
-impl Driver for Function {
-    type Parsed = Function;
+impl Driver for Type {
+    type Parsed = Self;
 
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
-        // Parse return value.
-        let return_ty = {
-            let mut w = Walker::from(walker.read_until_separator()?);
-            Type::drive(&mut w)?
+        let ty = if let Ok(primitive) = Primitive::drive(walker) {
+            Type::Primitive(primitive)
+        } else if walker.read_until_separator()? == "struct" {
+            Type::Struct(Struct::drive(walker)?)
+        } else if let Ok(other) = Other::drive(walker) {
+            Type::Custom(other)
+        } else {
+            return Err(Error::Todo);
         };
 
         walker.next();
-
-        // Expect separator.
-        walker.ensure_separator()?;
-
-        // Check for possible markers, function name and function params.
-        let mut markers = vec![];
-        let name;
-        let params;
-
-        // TODO: Comment on behavior
-        loop {
-            let mut w = Walker::from(walker.read_until(';')?);
-
-            if let Ok(f) = FunctionNameWithParams::drive(&mut w) {
-                name = f.name;
-                params = f.params;
-                walker.next();
-                break;
-            } else if let Ok(other) = Marker::drive(walker) {
-                markers.push(other);
-            } else {
-                panic!()
-            }
-
-            walker.next();
-            // Wipe separator.
-            let _ = walker.ensure_separator();
-        }
-
-        // Parse additional markers at the end of the function
-
-        // Expect semicolon.
-        walker.ensure_one_semicolon()?;
-
-        Ok(Function {
-            name,
-            params,
-            return_ty,
-            markers,
-        })
-    }
-}
-
-impl Driver for Other {
-    type Parsed = Other;
-
-    fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
-        // TODO: Addtional validity checks?
-        let other = Other(walker.read_until_separator()?.to_string());
-        walker.next();
         walker.ensure_eof()?;
-        Ok(other)
+
+        Ok(ty)
     }
 }
 
@@ -260,31 +231,15 @@ impl Driver for Primitive {
     }
 }
 
-impl Driver for AST {
-    type Parsed = ParsedAST;
+impl Driver for Other {
+    type Parsed = Other;
 
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
-        let token = walker.read_until_separator()?;
-        let amt_read = token.len();
-
-        match token {
-            "#pragma" => {
-                todo!()
-            }
-            "include" => {
-                todo!()
-            }
-            _ => {
-                walker.next();
-
-                if let Ok(_parsed) = Function::drive(walker) {
-                    Ok(ParsedAST::Function)
-                } else {
-                    // TODO: Error
-                    todo!()
-                }
-            }
-        }
+        // TODO: Addtional validity checks?
+        let other = Other(walker.read_until_separator()?.to_string());
+        walker.next();
+        walker.ensure_eof()?;
+        Ok(other)
     }
 }
 
@@ -314,6 +269,34 @@ impl Driver for Struct {
     }
 }
 
+impl Driver for AST {
+    type Parsed = ParsedAST;
+
+    fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
+        let token = walker.read_until_separator()?;
+        let amt_read = token.len();
+
+        match token {
+            "#pragma" => {
+                todo!()
+            }
+            "include" => {
+                todo!()
+            }
+            _ => {
+                walker.next();
+
+                if let Ok(_parsed) = Function::drive(walker) {
+                    Ok(ParsedAST::Function)
+                } else {
+                    // TODO: Error
+                    todo!()
+                }
+            }
+        }
+    }
+}
+
 // TODO: Test individually.
 impl Driver for Marker {
     type Parsed = Self;
@@ -330,3 +313,21 @@ impl Driver for Marker {
         Ok(Marker::Other(Other(word.to_string())))
     }
 }
+
+impl Driver for CommentBlock {
+    type Parsed = Self;
+
+    fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
+        // TODO: Be stricter
+
+        let line = walker.read_eof()?.to_string();
+        if line.starts_with("///") {
+            walker.next();
+            walker.ensure_eof()?;
+            Ok(CommentBlock(line.replace("///", "").trim().to_string()))
+        } else {
+            Err(Error::Todo)
+        }
+    }
+}
+

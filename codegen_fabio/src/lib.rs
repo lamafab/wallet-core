@@ -137,23 +137,17 @@ impl<R: Read> Walker<R> {
 
         Ok(&decoded[..counter])
     }
+    // Convenience method.
     fn read_until(&mut self, token: char) -> Result<&str> {
         self.read_until_fn(|char| char == token, false)
     }
-    // TODO: Write more tests for this.
+    // Convenience method.
     fn read_until_separator(&mut self) -> Result<&str> {
         self.read_until_fn(|char| char == ' ' || char == '\n', true)
     }
+    // Convenience method.
     fn read_eof(&mut self) -> Result<&str> {
         self.read_until_fn(|_| false, true)
-    }
-    fn ensure_consume_fn<F>(&mut self, custom: F, ensure: EnsureVariant) -> Result<usize>
-    where
-        F: Fn(char) -> bool,
-    {
-        let amt = self.ensure_fn(custom, ensure)?;
-        self.reader.consume(amt);
-        Ok(amt)
     }
     // TODO: Maybe rename this, given that it does not consume the reader.
     fn ensure_fn<F>(&mut self, custom: F, ensure: EnsureVariant) -> Result<usize>
@@ -186,6 +180,16 @@ impl<R: Read> Walker<R> {
 
         Err(Error::Todo)
     }
+    // Convenience method.
+    fn ensure_consume_fn<F>(&mut self, custom: F, ensure: EnsureVariant) -> Result<usize>
+    where
+        F: Fn(char) -> bool,
+    {
+        let amt = self.ensure_fn(custom, ensure)?;
+        self.reader.consume(amt);
+        Ok(amt)
+    }
+    // Convenience method.
     fn ensure_eof(&mut self) -> Result<()> {
         let read = self.read_until_fn(|_| false, true)?;
         if read.is_empty() {
@@ -194,6 +198,7 @@ impl<R: Read> Walker<R> {
             Err(Error::Todo)
         }
     }
+    // Convenience method.
     fn ensure_separator(&mut self) -> Result<()> {
         let amt = self.ensure_fn(
             |char| char == ' ' || char == '\n',
@@ -202,12 +207,13 @@ impl<R: Read> Walker<R> {
         self.reader.consume(amt);
         Ok(())
     }
+    // Convenience method.
     fn ensure_one_semicolon(&mut self) -> Result<()> {
         let amt = self.ensure_fn(|char| char == ';', EnsureVariant::Exactly(1))?;
         self.reader.consume(amt);
         Ok(())
     }
-    // TODO: Test multiple calls.
+    // Consume reader and move on with the next data.
     fn next(&mut self) {
         self.reader.consume(self.last_read_amt);
         self.last_read_amt = 0;
