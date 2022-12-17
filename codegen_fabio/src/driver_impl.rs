@@ -1,9 +1,25 @@
 use crate::{
-    Driver, Function, FunctionParam, FunctionParams, Marker, Other, ParsedAST, Primitive, Result,
-    Struct, Type, Walker, AST, Error,
+    Driver, Error, Function, FunctionParam, FunctionParams, Marker, Other, ParsedAST, Primitive,
+    Result, Struct, Type, Walker, AST,
 };
 use std::io::{BufRead, BufReader, Read};
 use std::str;
+
+fn valid_var_name(name: &str) -> bool {
+    // Name cannot be empty.
+    if name.is_empty() {
+        return false;
+    }
+
+    //Name cannot start with a number.
+    if name.chars().next().unwrap().is_numeric() {
+        return false;
+    }
+
+    // Check for valid characters.
+    name.chars()
+        .any(|char| !char.is_ascii_alphanumeric() && char != '_' && char != '-')
+}
 
 impl Driver for Type {
     type Parsed = Self;
@@ -28,8 +44,78 @@ impl Driver for Type {
 impl Driver for FunctionParams {
     type Parsed = Self;
 
-    fn drive<R: Read>(_: &mut Walker<R>) -> Result<Self::Parsed> {
-        todo!()
+    fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
+        // We dont want to consume the reader too early. We first read until
+        // `(`, then make sure we got a valid function name.
+        let function_name = walker.read_until_fn(|char| char == '(', false)?.to_string();
+
+        if !valid_var_name(&function_name) {
+            return Err(Error::Todo);
+        }
+
+        // Consume reader, skip passed the opening bracket.
+        walker.next();
+        walker.ensure_fn(|char| char == '(', crate::EnsureVariant::Exactly(1))?;
+
+        // Parse parameters
+        let mut params = vec![];
+        loop {
+            let param_ty = Type::drive(walker)?;
+            walker.ensure_separator()?;
+
+            // Check for possible parameter markers.
+            let mut markers = vec![];
+            loop {
+                let maybe_marker =
+                    walker.read_until_fn(|char| char == ')' || char == ',', false)?;
+
+                // If this fails, then this implies that there *is* a marker,
+                // meaning we caught both the marker and the parameter name (or
+                // another marker). E.g. "_NotNull my_var", which is not a valid
+                // variable name.
+                if valid_var_name(maybe_marker) {
+                    markers.push(Marker::drive(walker)?);
+                } else {
+                    break;
+                }
+            }
+
+            walker.ensure_separator()?;
+
+            // Parse param name
+            let param_name = walker.read_until_fn(|char| char == ')', false)?;
+
+            // Sanity check
+            if !valid_var_name(param_name) {
+                return Err(Error::Todo);
+            }
+
+            params.push(FunctionParam {
+                name: param_name.to_string(),
+                ty: param_ty,
+                markers,
+            });
+
+            // We don't care if this fails here. We just need to check wether a
+            // comma or closing bracket is present next.
+            let _ = walker.ensure_separator();
+
+            if walker
+                .ensure_fn(|char| char == ')', crate::EnsureVariant::Exactly(1))
+                .is_ok()
+            {
+                // All parameters parsed.
+                break;
+            } else {
+                // Continue with next parameter, consume comma.
+                walker.ensure_fn(|char| char == ',', crate::EnsureVariant::Exactly(1))?;
+            }
+        }
+
+        Ok(FunctionParams {
+            name: function_name,
+            params,
+        })
     }
 }
 
@@ -93,7 +179,7 @@ impl Driver for Other {
     type Parsed = Other;
 
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
-		// TODO: Should just use `read_until_separator`.
+        // TODO: Should just use `read_until_separator`.
         let keyword = walker.read_until_fn(
             |char| !char.is_ascii_alphanumeric() && char != '_' && char != '-',
             true,
@@ -193,24 +279,32 @@ impl Driver for Struct {
     type Parsed = Self;
 
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
-		let prefix = walker.read_until_separator()?;
+        let prefix = walker.read_until_separator()?;
 
-		let strct = if prefix == "struct" {
-			walker.next();
-			walker.ensure_separator()?;
+        let strct = if prefix == "struct" {
+            walker.next();
+            walker.ensure_separator()?;
 
-			let name = walker.read_until_separator()?;
-			if !name.is_empty() {
-				Struct(name.to_string())
-			} else {
-				return Err(Error::Todo)
-			}
-		} else {
-			return Err(Error::Todo)
-		};
+            let name = walker.read_until_separator()?;
+            if !name.is_empty() {
+                Struct(name.to_string())
+            } else {
+                return Err(Error::Todo);
+            }
+        } else {
+            return Err(Error::Todo);
+        };
 
-		walker.next();
+        walker.next();
 
-		Ok(strct)
+        Ok(strct)
+    }
+}
+
+impl Driver for Marker {
+    type Parsed = Self;
+
+    fn drive<R: Read>(_: &mut Walker<R>) -> Result<Self::Parsed> {
+        todo!()
     }
 }

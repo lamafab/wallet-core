@@ -47,14 +47,6 @@ enum Marker {
     Other(Other),
 }
 
-impl Driver for Marker {
-    type Parsed = Self;
-
-    fn drive<R: Read>(_: &mut Walker<R>) -> Result<Self::Parsed> {
-        todo!()
-    }
-}
-
 enum SpecialMarker {}
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -76,8 +68,8 @@ struct Function {
 
 struct FunctionParam {
     name: String,
-    ty: (),
-    markers: Vec<()>,
+    ty: Type,
+    markers: Vec<Marker>,
 }
 
 trait Driver {
@@ -175,7 +167,10 @@ impl<R: Read> Walker<R> {
         Ok(())
     }
     fn ensure_separator(&mut self) -> Result<()> {
-        let amt = self.ensure_fn(|char| char == ' ' || char == '\n', EnsureVariant::AtLeast(1))?;
+        let amt = self.ensure_fn(
+            |char| char == ' ' || char == '\n',
+            EnsureVariant::AtLeast(1),
+        )?;
         self.reader.consume(amt);
         Ok(())
     }
