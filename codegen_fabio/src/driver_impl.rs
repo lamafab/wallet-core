@@ -2,7 +2,7 @@ use crate::{
     Driver, Error, Function, FunctionNameWithParams, FunctionParam, Marker, Other, ParsedAST,
     Primitive, Result, Struct, Type, Walker, AST,
 };
-use std::io::{BufRead, BufReader, Read};
+use std::io::Read;
 use std::str;
 
 fn valid_var_name(name: &str) -> bool {
@@ -17,7 +17,8 @@ fn valid_var_name(name: &str) -> bool {
     }
 
     // Check for valid characters.
-    !name.chars()
+    !name
+        .chars()
         .any(|char| !char.is_ascii_alphanumeric() && (char != '_' && char != '-'))
 }
 
@@ -46,7 +47,6 @@ impl Driver for FunctionNameWithParams {
     type Parsed = Self;
 
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
-		println!("ABOUT TO PARSE FUNCTION");
         // Parse function name.
         let function_name = walker.read_until('(')?.trim_end().to_string();
 
@@ -56,14 +56,20 @@ impl Driver for FunctionNameWithParams {
 
         // Consume reader, skip passed the opening bracket.
         walker.next();
-		// Wipe optional separators
-		let _ = walker.ensure_separator();
+        // Wipe optional separators
+        let _ = walker.ensure_separator();
         walker.ensure_consume_fn(|char| char == '(', crate::EnsureVariant::Exactly(1))?;
 
         // Parse parameters
-		println!("ABOUT TO PARSE PARAMS");
         let mut params = vec![];
-        loop {
+
+        let param_body = walker.read_until(')')?;
+
+        // TODO: Rename
+        let chunks = param_body.split(',').collect::<Vec<&str>>();
+        for chunk in chunks {
+            let mut walker = Walker::from(chunk.trim());
+
             // Wipe optional separators.
             let _ = walker.ensure_separator();
 
@@ -73,79 +79,47 @@ impl Driver for FunctionNameWithParams {
                 Type::drive(&mut w)?
             };
 
-            println!("PARAM_TY: {:?}", param_ty);
-
             walker.next();
             walker.ensure_separator()?;
 
-            // Possible parameter markers.
+            // Parse the parameter name and possible markers.
             let mut markers = vec![];
+            let param_name;
             loop {
-                let maybe_marker = match walker.read_until(',') {
-                    Ok(m) => m,
-                    Err(Error::Eof) => break,
-                    err => return Err(err.unwrap_err()),
-                };
+				// TODO: Hacky, make this cleaner
+				let to_eof = walker.read_eof()?.to_string();
+				let to_sep = walker.read_until_separator()?;
 
-                println!("MAYBE_MARKER: {maybe_marker}");
+				if to_eof == to_sep {
+					// Validate parameter name.
+					if !valid_var_name(to_sep) {
+						return Err(Error::Todo);
+					}
 
-                // If this fails (and `maybe_marker` does not end with a closing
-                // bracket), then this implies that there *is* a marker, meaning
-                // we caught both the marker and the parameter name (or another
-                // marker). E.g. "_NotNull my_var", which is not a valid
-                // variable name.
-                if !valid_var_name(maybe_marker) && !maybe_marker.ends_with(')') {
-                    let mut walker = Walker::from(maybe_marker);
-                    markers.push(Marker::drive(&mut walker)?);
-                    walker.ensure_separator()?;
-                } else {
-                    break;
-                }
+					param_name = to_sep.to_string();
+					break;
+				} else {
+					let mut w = Walker::from(walker.read_until_separator()?);
+					let marker = Marker::drive(&mut w)?;
+					markers.push(marker);
+					walker.next();
+					// Wipe possible separators.
+					let _ = walker.ensure_separator();
+				}
             }
 
-            // Parse param name
-            let param_name = walker.read_until_fn(|char| char == ')' || char == ',', false)?.trim();
-
-			println!("PARAM NAME: '{param_name}'");
-
-            // Sanity check
-            if !valid_var_name(param_name) {
-				println!("ABOUT TO FAIL");
-                return Err(Error::Todo);
-            }
+            walker.next();
 
             params.push(FunctionParam {
                 name: param_name.to_string(),
                 ty: param_ty,
                 markers,
             });
-
-            walker.next();
-			// Wipe optional separators.
-            let _ = walker.ensure_separator();
-
-			println!("AT THE END");
-
-			println!("REST: {}", walker.read_eof()?);
-
-            if walker
-                .ensure_consume_fn(|char| char == ')', crate::EnsureVariant::Exactly(1))
-                .is_ok()
-            {
-                // All parameters parsed.
-				println!("BREAKING");
-                break;
-            } else {
-                // Continue with next parameter, consume comma.
-                walker.ensure_consume_fn(|char| char == ',', crate::EnsureVariant::Exactly(1))?;
-            }
-
-			println!("CONTINUING");
         }
 
-		println!(">> TO EOF");
-		walker.ensure_eof()?;
-		println!(">> AFTER EOF");
+        walker.next();
+        walker.ensure_consume_fn(|char| char == ')', crate::EnsureVariant::Exactly(1))?;
+        walker.ensure_eof()?;
 
         Ok(FunctionNameWithParams {
             name: function_name,
@@ -159,10 +133,10 @@ impl Driver for Function {
 
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
         // Parse return value.
-		let return_ty = {
-			let mut w = Walker::from(walker.read_until_separator()?);
-			Type::drive(&mut w)?
-		};
+        let return_ty = {
+            let mut w = Walker::from(walker.read_until_separator()?);
+            Type::drive(&mut w)?
+        };
 
         walker.next();
 
@@ -176,14 +150,12 @@ impl Driver for Function {
 
         // TODO: Comment on behavior
         loop {
-			let x = walker.read_until(';')?;
-			println!("TO BE PARSED: {x}");
-			let mut w = Walker::from(x);
+            let mut w = Walker::from(walker.read_until(';')?);
 
             if let Ok(f) = FunctionNameWithParams::drive(&mut w) {
                 name = f.name;
                 params = f.params;
-				walker.next();
+                walker.next();
                 break;
             } else if let Ok(other) = Marker::drive(walker) {
                 markers.push(other);
@@ -191,27 +163,14 @@ impl Driver for Function {
                 panic!()
             }
 
-			// TODO:
+            // TODO:
             //walker.next();
-			// Wipe separator.
+            // Wipe separator.
             let _ = walker.ensure_separator();
         }
 
-        // Check for possible marker
-		/*
-        if let Ok(marker) = Marker::drive(walker) {
-            markers.push(marker);
-            walker.next();
-        }
-		*/
-
-		let rest = walker.read_eof()?;
-		println!("REST: {rest}");
-
         // Expect semicolon.
-		println!(">> ENSURE ONE SEMI");
         walker.ensure_one_semicolon()?;
-		println!(">> AFTER ONE SEMI");
 
         Ok(Function {
             name,
