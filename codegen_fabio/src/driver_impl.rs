@@ -44,10 +44,11 @@ impl Driver for Function {
 
         // TODO: Comment on behavior
         loop {
-			// TODO: Rename
-			let slice = [walker.read_until(')')?, ")"].concat();
-            let mut w = Walker::from(slice.as_str());
+			let mut func_params = walker.read_until(')')?.to_string();
+			// Parse with trailing closing bracket.
+			func_params.push(')');
 
+            let mut w = Walker::from(func_params.as_str());
             if let Ok(f) = FunctionNameWithParams::drive(&mut w) {
                 name = f.name;
                 params = f.params;
