@@ -1,4 +1,4 @@
-// Copyright © 2017-2022 Trust Wallet.
+// Copyright 2017-2022 Trust Wallet.
 //
 // This file is part of Trust. The full Trust copyright notice, including
 // terms governing use, modification, and redistribution, is contained in the
@@ -10,25 +10,25 @@
 
 TW_EXTERN_C_BEGIN
 
-typedef const void TWData;
+typedef void TWData;
 
 /// Defines a resizable string.
 ///
 /// The implementantion of these methods should be language-specific to minimize translation
 /// overhead. For instance it should be a `jstring` for Java and an `NSString` for Swift. Create
 /// allocates memory, the delete call should be called at the end to release memory.
-typedef const void TWString;
+typedef void TWString;
 
 /// Creates a TWString from a null-terminated UTF8 byte array. It must be deleted at the end.
 ///
 /// \param bytes a null-terminated UTF8 byte array.
-TWString* _Nonnull TWStringCreateWithUTF8Bytes(const char* _Nonnull bytes) TW_VISIBILITY_DEFAULT;
+TWString* _Nonnull TWStringCreateWithUTF8Bytes(char* _Nonnull bytes) TW_VISIBILITY_DEFAULT;
 
 /// Creates a string from a raw byte array and size. It must be deleted at the end.
 ///
 /// \param bytes a raw byte array.
 /// \param size the size of the byte array.
-TWString* _Nonnull TWStringCreateWithRawBytes(const uint8_t* _Nonnull bytes, size_t size) TW_VISIBILITY_DEFAULT;
+TWString* _Nonnull TWStringCreateWithRawBytes(uint8_t* _Nonnull bytes, size_t size) TW_VISIBILITY_DEFAULT;
 
 /// Creates a hexadecimal string from a block of data. It must be deleted at the end.
 ///
@@ -49,7 +49,7 @@ char TWStringGet(TWString* _Nonnull string, size_t index) TW_VISIBILITY_DEFAULT;
 /// Returns the raw pointer to the string's UTF8 bytes (null-terminated).
 ///
 /// \param string a TWString pointer.
-const char* _Nonnull TWStringUTF8Bytes(TWString* _Nonnull string) TW_VISIBILITY_DEFAULT;
+char* _Nonnull TWStringUTF8Bytes(TWString* _Nonnull string) TW_VISIBILITY_DEFAULT;
 
 /// Deletes a string created with a `TWStringCreate*` method and frees the memory.
 ///

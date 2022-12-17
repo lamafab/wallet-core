@@ -260,7 +260,11 @@ impl Driver for Other {
 
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
         // TODO: Addtional validity checks?
-        let other = Other(walker.read_until_separator()?.to_string());
+		let other = walker.read_until_separator()?.to_string();
+		if other.is_empty() {
+			return Err(Error::Todo);
+		}
+        let other = Other(other);
         walker.next();
         walker.ensure_eof()?;
         Ok(other)
@@ -296,21 +300,52 @@ impl Driver for Struct {
 impl Driver for AST {
     type Parsed = Self;
 
+	// TODO: Experimenting around, clean this all up.
+	// TODO: This should not loop, the `Engine` should be responsible for reading the full file.
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
-        let token = walker.read_until_fn(|char| char == '\n', true)?;
-        let amt_read = token.len();
+		let mut ast = AST::new();
+		let mut counter = 0;
 
-        let mut ast = AST::new();
+		loop {
+			if counter == 10 {
+				//break;
+			}
+			counter += 1;
 
-        match token {
-            _ => {
-                // Assume function
-                let mut w = Walker::from(walker.read_until(';')?);
-                if let Ok(func) = Function::drive(&mut w) {
-                    ast.push(crate::AstVariants::Function(func));
-                }
-            }
-        }
+			let token = walker.read_until_fn(|char| char == '\n' || char == '\r', true).unwrap().to_string();
+			let token_len = token.len();
+			dbg!(&token);
+
+			if token.is_empty() {
+				let rest = walker.read_eof().unwrap();
+				if rest.is_empty() {
+					break;
+				}
+			}
+
+			if token.starts_with("//") {
+				// TODO
+			} else {
+				// Assume function
+				// TODO: Implement a `read_until_with` method
+				let mut slice = walker.read_until_fn(|char| char == ';', true).unwrap().to_string();
+				slice.push(';');
+				let mut w = Walker::from(slice.as_str());
+				dbg!(&slice);
+				if let Ok(func) = Function::drive(&mut w) {
+					println!(">>> PASSED!");
+					ast.push(crate::AstVariants::Function(func));
+					walker.next();
+					walker.ensure_one_semicolon().unwrap();
+					walker.ensure_consume_fn(|char| char == '\n', crate::EnsureVariant::AtLeast(0)).unwrap();
+					continue;
+				}
+			}
+
+			walker.last_read_amt = token_len;
+			walker.next();
+			walker.ensure_consume_fn(|char| char == '\n', crate::EnsureVariant::AtLeast(0)).unwrap();
+		}
 
         Ok(ast)
     }

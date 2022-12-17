@@ -10,8 +10,10 @@ enum Error {
     Todo,
     Eof,
 }
+
 type Result<T> = std::result::Result<T, Error>;
 
+#[derive(Debug, Clone, Eq, PartialEq)]
 struct AST {
     list: Vec<AstVariants>,
 }
@@ -25,6 +27,7 @@ impl AST {
     }
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
 enum AstVariants {
     Function(Function),
 }
@@ -230,4 +233,36 @@ impl<R: Read> Walker<R> {
 enum EnsureVariant {
     AtLeast(usize),
     Exactly(usize),
+}
+
+use std::fs::File;
+
+struct Engine {
+    // TODO: Use `Path`
+    paths: Vec<String>
+}
+
+impl Engine {
+    // TODO: Take `Path` here.
+    fn new_path(path: &str) -> Self {
+        // TODO: Maybe should check whether the path actually exists.
+        Engine { paths: vec![path.to_string()] }
+    }
+    fn start(&self) -> Result<()> {
+        for path in &self.paths {
+            let file = File::open(path).unwrap();
+            let mut walker = Walker::new(file);
+            let x = AST::drive(&mut walker)?;
+
+            dbg!(x);
+        }
+
+        panic!()
+    }
+}
+
+#[test]
+fn test_engine() {
+    let engine = Engine::new_path("../include/TrustWalletCore/TWString.h");
+    engine.start().unwrap();
 }
