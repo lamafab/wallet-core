@@ -47,6 +47,7 @@ struct FunctionNameWithParams {
 #[derive(Debug, Clone, Eq, PartialEq)]
 enum Marker {
     Recognized(SpecialMarker),
+    // TODO: Should this be `Other`?
     Other(Other),
 }
 
@@ -85,6 +86,12 @@ trait Driver {
 
 enum ParsedAST {
     Function,
+}
+
+impl<'a> From<&'a str> for Walker<&'a [u8]> {
+    fn from(buffer: &'a str) -> Self {
+        Walker::new(buffer.as_bytes())
+    }
 }
 
 struct Walker<R: Read> {

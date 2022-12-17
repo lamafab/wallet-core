@@ -1,6 +1,6 @@
 use crate::{
-    Driver, Error, Function, FunctionParam, FunctionNameWithParams, Marker, Other, ParsedAST, Primitive,
-    Result, Struct, Type, Walker, AST,
+    Driver, Error, Function, FunctionNameWithParams, FunctionParam, Marker, Other, ParsedAST,
+    Primitive, Result, Struct, Type, Walker, AST,
 };
 use std::io::{BufRead, BufReader, Read};
 use std::str;
@@ -18,7 +18,7 @@ fn valid_var_name(name: &str) -> bool {
 
     // Check for valid characters.
     name.chars()
-        .any(|char| !char.is_ascii_alphanumeric() && char != ' ' && char != '-')
+        .any(|char| !char.is_ascii_alphanumeric() || (char != ' ' && char != '-'))
 }
 
 impl Driver for Type {
@@ -66,24 +66,24 @@ impl Driver for FunctionNameWithParams {
             // Check for possible parameter markers.
             let mut markers = vec![];
             loop {
-                let maybe_marker =
-                    walker.read_until_fn(|char| char == ')' || char == ',', false)?;
+                let maybe_marker = walker.read_until_fn(|char| char == ',', true)?;
 
-                // If this fails, then this implies that there *is* a marker,
-                // meaning we caught both the marker and the parameter name (or
-                // another marker). E.g. "_NotNull my_var", which is not a valid
+                // If this fails (and `maybe_marker` does not end with a closing
+                // bracket), then this implies that there *is* a marker, meaning
+                // we caught both the marker and the parameter name (or another
+                // marker). E.g. "_NotNull my_var", which is not a valid
                 // variable name.
-                if valid_var_name(maybe_marker) {
-                    markers.push(Marker::drive(walker)?);
+                if !valid_var_name(maybe_marker) && !maybe_marker.ends_with(')') {
+                    let mut walker = Walker::from(maybe_marker);
+                    markers.push(Marker::drive(&mut walker)?);
+                    walker.ensure_separator()?;
                 } else {
                     break;
                 }
             }
 
-            walker.ensure_separator()?;
-
             // Parse param name
-            let param_name = walker.read_until_fn(|char| char == ')', false)?;
+            let param_name = walker.read_until_fn(|char| char == ')' || char == ',', false)?;
 
             // Sanity check
             if !valid_var_name(param_name) {
@@ -96,6 +96,7 @@ impl Driver for FunctionNameWithParams {
                 markers,
             });
 
+            walker.next();
             // We don't care if this fails here. We just need to check wether a
             // comma or closing bracket is present next.
             let _ = walker.ensure_separator();
@@ -301,10 +302,15 @@ impl Driver for Struct {
     }
 }
 
+// TODO: Test individually.
 impl Driver for Marker {
     type Parsed = Self;
 
-    fn drive<R: Read>(_: &mut Walker<R>) -> Result<Self::Parsed> {
-        todo!()
+    fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
+        let word = walker.read_until_separator()?;
+
+        // TODO:
+
+        Ok(Marker::Other(Other(word.to_string())))
     }
 }
