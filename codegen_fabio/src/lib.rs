@@ -33,7 +33,9 @@ enum Primitive {
 
 struct Typedef;
 struct Include;
-struct Other;
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+struct Other(String);
 // TODO: Rename this
 struct FunctionParams {
     name: String,

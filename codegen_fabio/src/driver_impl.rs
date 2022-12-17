@@ -12,7 +12,6 @@ impl Driver for Type {
         let ty = if let Ok(primitive) = Primitive::drive(walker) {
             Type::Primitive(primitive)
         } else if walker.read_until_separator()? == "struct" {
-            walker.next();
             Type::Struct(Struct::drive(walker)?)
         } else if let Ok(other) = Other::drive(walker) {
             Type::Custom(other)
@@ -93,8 +92,16 @@ impl Driver for Function {
 impl Driver for Other {
     type Parsed = Other;
 
-    fn drive<R: Read>(_: &mut Walker<R>) -> Result<Self::Parsed> {
-        todo!()
+    fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
+        let keyword = walker.read_until_fn(
+            |char| !char.is_ascii_alphanumeric() && char != '_' && char != '-',
+            true,
+        )?;
+
+        let other = Other(keyword.to_string());
+        walker.next();
+
+        Ok(other)
     }
 }
 
