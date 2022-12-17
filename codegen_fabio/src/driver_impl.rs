@@ -1,5 +1,5 @@
 use crate::{
-    Driver, Error, Function, FunctionParam, FunctionParams, Marker, Other, ParsedAST, Primitive,
+    Driver, Error, Function, FunctionParam, FunctionNameWithParams, Marker, Other, ParsedAST, Primitive,
     Result, Struct, Type, Walker, AST,
 };
 use std::io::{BufRead, BufReader, Read};
@@ -18,7 +18,7 @@ fn valid_var_name(name: &str) -> bool {
 
     // Check for valid characters.
     name.chars()
-        .any(|char| !char.is_ascii_alphanumeric() && char != '_' && char != '-')
+        .any(|char| !char.is_ascii_alphanumeric() && char != ' ' && char != '-')
 }
 
 impl Driver for Type {
@@ -41,7 +41,7 @@ impl Driver for Type {
     }
 }
 
-impl Driver for FunctionParams {
+impl Driver for FunctionNameWithParams {
     type Parsed = Self;
 
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
@@ -55,7 +55,7 @@ impl Driver for FunctionParams {
 
         // Consume reader, skip passed the opening bracket.
         walker.next();
-        walker.ensure_fn(|char| char == '(', crate::EnsureVariant::Exactly(1))?;
+        walker.ensure_consume_fn(|char| char == '(', crate::EnsureVariant::Exactly(1))?;
 
         // Parse parameters
         let mut params = vec![];
@@ -101,18 +101,18 @@ impl Driver for FunctionParams {
             let _ = walker.ensure_separator();
 
             if walker
-                .ensure_fn(|char| char == ')', crate::EnsureVariant::Exactly(1))
+                .ensure_consume_fn(|char| char == ')', crate::EnsureVariant::Exactly(1))
                 .is_ok()
             {
                 // All parameters parsed.
                 break;
             } else {
                 // Continue with next parameter, consume comma.
-                walker.ensure_fn(|char| char == ',', crate::EnsureVariant::Exactly(1))?;
+                walker.ensure_consume_fn(|char| char == ',', crate::EnsureVariant::Exactly(1))?;
             }
         }
 
-        Ok(FunctionParams {
+        Ok(FunctionNameWithParams {
             name: function_name,
             params,
         })
@@ -144,7 +144,7 @@ impl Driver for Function {
 
         // TODO: Comment on behavior
         loop {
-            if let Ok(f) = FunctionParams::drive(walker) {
+            if let Ok(f) = FunctionNameWithParams::drive(walker) {
                 name = f.name;
                 params = f.params;
                 break;

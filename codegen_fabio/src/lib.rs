@@ -37,16 +37,20 @@ struct Include;
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct Other(String);
 // TODO: Rename this
-struct FunctionParams {
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+struct FunctionNameWithParams {
     name: String,
     params: Vec<FunctionParam>,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
 enum Marker {
     Recognized(SpecialMarker),
     Other(Other),
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
 enum SpecialMarker {}
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -66,6 +70,7 @@ struct Function {
     return_ty: Type,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
 struct FunctionParam {
     name: String,
     ty: Type,
@@ -131,6 +136,15 @@ impl<R: Read> Walker<R> {
     fn read_until_separator(&mut self) -> Result<&str> {
         self.read_until_fn(|char| char == ' ' || char == '\n', true)
     }
+    fn ensure_consume_fn<F>(&mut self, custom: F, ensure: EnsureVariant) -> Result<usize>
+    where
+        F: Fn(char) -> bool,
+    {
+        let amt = self.ensure_fn(custom, ensure)?;
+        self.reader.consume(amt);
+        Ok(amt)
+    }
+    // TODO: Maybe rename this, given that it does not consume the reader.
     fn ensure_fn<F>(&mut self, custom: F, ensure: EnsureVariant) -> Result<usize>
     where
         F: Fn(char) -> bool,
