@@ -46,8 +46,9 @@ impl Driver for FunctionNameWithParams {
     type Parsed = Self;
 
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
+		println!("ABOUT TO PARSE FUNCTION");
         // Parse function name.
-        let function_name = walker.read_until('(')?.to_string();
+        let function_name = walker.read_until('(')?.trim_end().to_string();
 
         if !valid_var_name(&function_name) {
             return Err(Error::Todo);
@@ -55,12 +56,15 @@ impl Driver for FunctionNameWithParams {
 
         // Consume reader, skip passed the opening bracket.
         walker.next();
+		// Wipe optional separators
+		let _ = walker.ensure_separator();
         walker.ensure_consume_fn(|char| char == '(', crate::EnsureVariant::Exactly(1))?;
 
         // Parse parameters
+		println!("ABOUT TO PARSE PARAMS");
         let mut params = vec![];
         loop {
-            // Wipe separators.
+            // Wipe optional separators.
             let _ = walker.ensure_separator();
 
             // Parameter type
@@ -102,10 +106,13 @@ impl Driver for FunctionNameWithParams {
             }
 
             // Parse param name
-            let param_name = walker.read_until_fn(|char| char == ')' || char == ',', false)?;
+            let param_name = walker.read_until_fn(|char| char == ')' || char == ',', false)?.trim();
+
+			println!("PARAM NAME: '{param_name}'");
 
             // Sanity check
             if !valid_var_name(param_name) {
+				println!("ABOUT TO FAIL");
                 return Err(Error::Todo);
             }
 
@@ -116,21 +123,29 @@ impl Driver for FunctionNameWithParams {
             });
 
             walker.next();
-            // We don't care if this fails here. We just need to check wether a
-            // comma or closing bracket is present next.
+			// Wipe optional separators.
             let _ = walker.ensure_separator();
+
+			println!("AT THE END");
+
+			println!("REST: {}", walker.read_eof()?);
 
             if walker
                 .ensure_consume_fn(|char| char == ')', crate::EnsureVariant::Exactly(1))
                 .is_ok()
             {
                 // All parameters parsed.
+				println!("BREAKING");
                 break;
             } else {
                 // Continue with next parameter, consume comma.
                 walker.ensure_consume_fn(|char| char == ',', crate::EnsureVariant::Exactly(1))?;
             }
+
+			println!("CONTINUING");
         }
+
+		walker.ensure_eof()?;
 
         Ok(FunctionNameWithParams {
             name: function_name,
