@@ -1,6 +1,6 @@
 use crate::{
-    CommentBlock, Driver, Error, Function, FunctionNameWithParams, FunctionParam, Marker, Other,
-    Primitive, Result, Struct, Type, Walker, AST,
+    AstVariants, CommentBlock, Driver, Error, Function, FunctionNameWithParams, FunctionParam,
+    Marker, Other, Primitive, Result, Struct, Type, Walker, AST,
 };
 use std::io::Read;
 use std::{primitive, str};
@@ -44,9 +44,9 @@ impl Driver for Function {
 
         // TODO: Comment on behavior
         loop {
-			let mut func_params = walker.read_until(')')?.to_string();
-			// Parse with trailing closing bracket.
-			func_params.push(')');
+            let mut func_params = walker.read_until(')')?.to_string();
+            // Parse with trailing closing bracket.
+            func_params.push(')');
 
             let mut w = Walker::from(func_params.as_str());
             if let Ok(f) = FunctionNameWithParams::drive(&mut w) {
@@ -56,7 +56,7 @@ impl Driver for Function {
             } else if let Ok(other) = Marker::drive(walker) {
                 markers.push(other);
             } else {
-				return Err(Error::Todo)
+                return Err(Error::Todo);
             }
 
             walker.next();
@@ -64,34 +64,32 @@ impl Driver for Function {
             let _ = walker.ensure_separator();
         }
 
-		walker.next();
-		// Wipe trailing closing bracket.
-		walker.ensure_consume_fn(|char| char == ')', crate::EnsureVariant::Exactly(1))?;
-		// Wipe separators.
-		let _ = walker.ensure_separator();
+        walker.next();
+        // Wipe trailing closing bracket.
+        walker.ensure_consume_fn(|char| char == ')', crate::EnsureVariant::Exactly(1))?;
+        // Wipe separators.
+        let _ = walker.ensure_separator();
 
         // Parse additional markers at the end of the function
-		loop {
-			dbg!(walker.read_eof()?);
-			let maybe_marker = walker.read_until_fn(|char| char == ' ' || char == '\n' || char == ';', false)?;
-			dbg!(maybe_marker);
-			if !maybe_marker.is_empty() && valid_var_name(maybe_marker) {
-				let mut w = Walker::from(maybe_marker);
-				markers.push(Marker::drive(&mut w)?);
-				walker.next();
-				dbg!(walker.read_eof()?);
-			} else {
-				break;
-			}
-		}
+        loop {
+            let maybe_marker =
+                walker.read_until_fn(|char| char == ' ' || char == '\n' || char == ';', false)?;
+            if !maybe_marker.is_empty() && valid_var_name(maybe_marker) {
+                let mut w = Walker::from(maybe_marker);
+                markers.push(Marker::drive(&mut w)?);
+                walker.next();
+            } else {
+                break;
+            }
+        }
 
-		//walker.next();
+        //walker.next();
 
-		// Wipe separators.
-		let _ = walker.ensure_separator();
+        // Wipe separators.
+        let _ = walker.ensure_separator();
         // Expect semicolon.
         walker.ensure_one_semicolon()?;
-		walker.ensure_eof()?;
+        walker.ensure_eof()?;
 
         Ok(Function {
             name,
@@ -299,22 +297,22 @@ impl Driver for AST {
     type Parsed = Self;
 
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
-        let token = walker.read_until_separator()?;
+        let token = walker.read_until_fn(|char| char == '\n', true)?;
         let amt_read = token.len();
 
-        match token {
-            "#pragma" => {
-                todo!()
-            }
-            "include" => {
-                todo!()
-            }
-            _ => {
-                walker.next();
+        let mut ast = AST::new();
 
-				todo!()
+        match token {
+            _ => {
+                // Assume function
+                let mut w = Walker::from(walker.read_until(';')?);
+                if let Ok(func) = Function::drive(&mut w) {
+                    ast.push(crate::AstVariants::Function(func));
+                }
             }
         }
+
+        Ok(ast)
     }
 }
 
@@ -329,10 +327,10 @@ impl Driver for Marker {
             return Err(Error::Todo);
         }
 
-		let word_string = word.to_string();
+        let word_string = word.to_string();
 
         // TODO...
-		walker.next();
+        walker.next();
 
         Ok(Marker::Other(Other(word_string)))
     }
@@ -354,4 +352,3 @@ impl Driver for CommentBlock {
         }
     }
 }
-

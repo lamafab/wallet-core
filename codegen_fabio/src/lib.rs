@@ -3,7 +3,7 @@ mod driver_impl;
 mod tests;
 
 use std::io::{BufRead, BufReader, Read};
-use std::str;
+use std::{str, vec};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 enum Error {
@@ -12,8 +12,20 @@ enum Error {
 }
 type Result<T> = std::result::Result<T, Error>;
 
-enum AST {
-    Marker,
+struct AST {
+    list: Vec<AstVariants>,
+}
+
+impl AST {
+    fn new() -> Self {
+        AST { list: vec![] }
+    }
+    fn push(&mut self, variant: AstVariants) {
+        self.list.push(variant);
+    }
+}
+
+enum AstVariants {
     Function(Function),
 }
 
