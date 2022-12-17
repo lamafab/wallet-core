@@ -45,9 +45,8 @@ impl Driver for FunctionNameWithParams {
     type Parsed = Self;
 
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
-        // We dont want to consume the reader too early. We first read until
-        // `(`, then make sure we got a valid function name.
-        let function_name = walker.read_until_fn(|char| char == '(', false)?.to_string();
+		// Parse function name.
+        let function_name = walker.read_until('(')?.to_string();
 
         if !valid_var_name(&function_name) {
             return Err(Error::Todo);
@@ -60,13 +59,29 @@ impl Driver for FunctionNameWithParams {
         // Parse parameters
         let mut params = vec![];
         loop {
-            let param_ty = Type::drive(walker)?;
+			// Parameter type
+			let try_ty = walker.read_until_separator()?;
+			println!("TRY_TY: {try_ty}");
+            let param_ty = {
+				let mut w = Walker::from(try_ty.trim());
+				Type::drive(&mut w)?
+			};
+
+			println!("PARAM_TY: {:?}", param_ty);
+
+			walker.next();
             walker.ensure_separator()?;
 
-            // Check for possible parameter markers.
+            // Possible parameter markers.
             let mut markers = vec![];
             loop {
-                let maybe_marker = walker.read_until_fn(|char| char == ',', true)?;
+                let maybe_marker = match walker.read_until(',') {
+					Ok(m) => m,
+					Err(Error::Eof) => break,
+					err => return Err(err.unwrap_err()),
+				};
+
+				println!("MAYBE_MARKER: {maybe_marker}");
 
                 // If this fails (and `maybe_marker` does not end with a closing
                 // bracket), then this implies that there *is* a marker, meaning
@@ -309,8 +324,12 @@ impl Driver for Marker {
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
         let word = walker.read_until_separator()?;
 
-        // TODO:
+		if word.is_empty() {
+			return Err(Error::Todo)
+		}
 
+        // TODO...
+	
         Ok(Marker::Other(Other(word.to_string())))
     }
 }

@@ -135,6 +135,10 @@ impl<R: Read> Walker<R> {
     fn read_until(&mut self, token: char) -> Result<&str> {
         self.read_until_fn(|char| char == token, false)
     }
+    // TODO: Shorted name
+    fn read_until_one_of(&mut self, tokens: &[char]) -> Result<&str> {
+        self.read_until_fn(|char| tokens.iter().any(|c| c == &char), false)
+    }
     // TODO: Is this needed?
     fn read_until_non_alphanumeric(&mut self) -> Result<&str> {
         self.read_until_fn(|char| !char.is_alphanumeric(), false)
