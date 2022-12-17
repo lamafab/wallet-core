@@ -32,10 +32,11 @@ impl Driver for Type {
         } else if let Ok(other) = Other::drive(walker) {
             Type::Custom(other)
         } else {
-            panic!()
+            return Err(Error::Todo);
         };
 
         walker.next();
+        walker.ensure_eof()?;
 
         Ok(ty)
     }
@@ -45,7 +46,7 @@ impl Driver for FunctionNameWithParams {
     type Parsed = Self;
 
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
-		// Parse function name.
+        // Parse function name.
         let function_name = walker.read_until('(')?.to_string();
 
         if !valid_var_name(&function_name) {
@@ -59,29 +60,29 @@ impl Driver for FunctionNameWithParams {
         // Parse parameters
         let mut params = vec![];
         loop {
-			// Parameter type
-			let try_ty = walker.read_until_separator()?;
-			println!("TRY_TY: {try_ty}");
+            // Parameter type
+            let try_ty = walker.read_until_separator()?;
+            println!("TRY_TY: {try_ty}");
             let param_ty = {
-				let mut w = Walker::from(try_ty.trim());
-				Type::drive(&mut w)?
-			};
+                let mut w = Walker::from(try_ty.trim());
+                Type::drive(&mut w)?
+            };
 
-			println!("PARAM_TY: {:?}", param_ty);
+            println!("PARAM_TY: {:?}", param_ty);
 
-			walker.next();
+            walker.next();
             walker.ensure_separator()?;
 
             // Possible parameter markers.
             let mut markers = vec![];
             loop {
                 let maybe_marker = match walker.read_until(',') {
-					Ok(m) => m,
-					Err(Error::Eof) => break,
-					err => return Err(err.unwrap_err()),
-				};
+                    Ok(m) => m,
+                    Err(Error::Eof) => break,
+                    err => return Err(err.unwrap_err()),
+                };
 
-				println!("MAYBE_MARKER: {maybe_marker}");
+                println!("MAYBE_MARKER: {maybe_marker}");
 
                 // If this fails (and `maybe_marker` does not end with a closing
                 // bracket), then this implies that there *is* a marker, meaning
@@ -196,13 +197,11 @@ impl Driver for Other {
 
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
         // TODO: Should just use `read_until_separator`.
-        let keyword = walker.read_until_fn(
-            |char| !char.is_ascii_alphanumeric() && char != '_' && char != '-',
-            true,
-        )?;
-
+        let keyword = walker.read_until_separator()?;
         let other = Other(keyword.to_string());
+
         walker.next();
+        walker.ensure_eof()?;
 
         Ok(other)
     }
@@ -219,16 +218,16 @@ impl Driver for Primitive {
                 walker.next();
                 walker.ensure_separator()?;
 
-				let primitive = Primitive::drive(walker)?;
-				match primitive {
-					Primitive::Char => Primitive::UnsignedChar,
-					Primitive::Int => Primitive::UnsignedInt,
-					Primitive::Short => Primitive::UnsignedShort,
-					Primitive::Long => Primitive::UnsignedLong,
-					Primitive::Bool => panic!(),
-					// Explicitly disallow all other.
-					_ => todo!(),
-				}
+                let primitive = Primitive::drive(walker)?;
+                match primitive {
+                    Primitive::Char => Primitive::UnsignedChar,
+                    Primitive::Int => Primitive::UnsignedInt,
+                    Primitive::Short => Primitive::UnsignedShort,
+                    Primitive::Long => Primitive::UnsignedLong,
+                    Primitive::Bool => panic!(),
+                    // Explicitly disallow all other.
+                    _ => todo!(),
+                }
             }
             "signed" => {
                 walker.next();
@@ -255,7 +254,7 @@ impl Driver for Primitive {
         };
 
         walker.next();
-		walker.ensure_eof()?;
+        walker.ensure_eof()?;
 
         Ok(primitive)
     }
@@ -322,12 +321,12 @@ impl Driver for Marker {
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
         let word = walker.read_until_separator()?;
 
-		if word.is_empty() {
-			return Err(Error::Todo)
-		}
+        if word.is_empty() {
+            return Err(Error::Todo);
+        }
 
         // TODO...
-	
+
         Ok(Marker::Other(Other(word.to_string())))
     }
 }
