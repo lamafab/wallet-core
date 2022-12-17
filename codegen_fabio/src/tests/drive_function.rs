@@ -73,7 +73,7 @@ fn drive_function_name_with_params_markers() {
 
 #[test]
 fn drive_function_full() {
-    let sample = "int some_func(int my_var, bool some);";
+    let sample = "int* _NotNull some_func(int my_var, bool some);";
     let mut walker = Walker::from(sample);
 
     let res = Function::drive(&mut walker).unwrap();

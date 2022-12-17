@@ -3,7 +3,7 @@ use crate::{
     Primitive, Result, Struct, Type, Walker, AST,
 };
 use std::io::Read;
-use std::str;
+use std::{primitive, str};
 
 fn valid_var_name(name: &str) -> bool {
     // Name cannot be empty.
@@ -86,26 +86,26 @@ impl Driver for FunctionNameWithParams {
             let mut markers = vec![];
             let param_name;
             loop {
-				// TODO: Hacky, make this cleaner
-				let to_eof = walker.read_eof()?.to_string();
-				let to_sep = walker.read_until_separator()?;
+                // TODO: Hacky, make this cleaner
+                let to_eof = walker.read_eof()?.to_string();
+                let to_sep = walker.read_until_separator()?;
 
-				if to_eof == to_sep {
-					// Validate parameter name.
-					if !valid_var_name(to_sep) {
-						return Err(Error::Todo);
-					}
+                if to_eof == to_sep {
+                    // Validate parameter name.
+                    if !valid_var_name(to_sep) {
+                        return Err(Error::Todo);
+                    }
 
-					param_name = to_sep.to_string();
-					break;
-				} else {
-					let mut w = Walker::from(walker.read_until_separator()?);
-					let marker = Marker::drive(&mut w)?;
-					markers.push(marker);
-					walker.next();
-					// Wipe possible separators.
-					let _ = walker.ensure_separator();
-				}
+                    param_name = to_sep.to_string();
+                    break;
+                } else {
+                    let mut w = Walker::from(walker.read_until_separator()?);
+                    let marker = Marker::drive(&mut w)?;
+                    markers.push(marker);
+                    walker.next();
+                    // Wipe possible separators.
+                    let _ = walker.ensure_separator();
+                }
             }
 
             walker.next();
@@ -163,11 +163,12 @@ impl Driver for Function {
                 panic!()
             }
 
-            // TODO:
-            //walker.next();
+            walker.next();
             // Wipe separator.
             let _ = walker.ensure_separator();
         }
+
+        // Parse additional markers at the end of the function
 
         // Expect semicolon.
         walker.ensure_one_semicolon()?;
@@ -176,6 +177,7 @@ impl Driver for Function {
             name,
             params,
             return_ty,
+            markers,
         })
     }
 }
@@ -184,13 +186,10 @@ impl Driver for Other {
     type Parsed = Other;
 
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
-        // TODO: Should just use `read_until_separator`.
-        let keyword = walker.read_until_separator()?;
-        let other = Other(keyword.to_string());
-
+        // TODO: Addtional validity checks?
+        let other = Other(walker.read_until_separator()?.to_string());
         walker.next();
         walker.ensure_eof()?;
-
         Ok(other)
     }
 }
@@ -206,31 +205,27 @@ impl Driver for Primitive {
                 walker.next();
                 walker.ensure_separator()?;
 
-                let primitive = Primitive::drive(walker)?;
-                match primitive {
+                match Primitive::drive(walker)? {
                     Primitive::Char => Primitive::UnsignedChar,
                     Primitive::Int => Primitive::UnsignedInt,
                     Primitive::Short => Primitive::UnsignedShort,
                     Primitive::Long => Primitive::UnsignedLong,
                     Primitive::Bool => panic!(),
                     // Explicitly disallow all other.
-                    _ => todo!(),
+                    _ => return Err(Error::Todo),
                 }
             }
             "signed" => {
                 walker.next();
                 walker.ensure_separator()?;
 
-                if let Ok(primitive) = Primitive::drive(walker) {
-                    match primitive {
-                        Primitive::Char | Primitive::Int | Primitive::Short | Primitive::Long => {
-                            primitive
-                        }
-                        // Explicitly disallow all other.
-                        _ => todo!(),
+                let primitive = Primitive::drive(walker)?;
+                match primitive {
+                    Primitive::Char | Primitive::Int | Primitive::Short | Primitive::Long => {
+                        primitive
                     }
-                } else {
-                    panic!()
+                    // Explicitly disallow all other.
+                    _ => return Err(Error::Todo),
                 }
             }
             "char" => Primitive::Char,

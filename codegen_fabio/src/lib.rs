@@ -70,6 +70,7 @@ struct Function {
     name: String,
     params: Vec<FunctionParam>,
     return_ty: Type,
+    markers: Vec<Marker>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
