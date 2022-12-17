@@ -1,6 +1,6 @@
 use crate::{
-    Driver, Error, Function, FunctionNameWithParams, FunctionParam, Marker, Other, ParsedAST,
-    Primitive, Result, Struct, Type, Walker, AST,
+    CommentBlock, Driver, Error, Function, FunctionNameWithParams, FunctionParam, Marker, Other,
+    ParsedAST, Primitive, Result, Struct, Type, Walker, AST,
 };
 use std::io::Read;
 use std::{primitive, str};
@@ -20,6 +20,23 @@ fn valid_var_name(name: &str) -> bool {
     !name
         .chars()
         .any(|char| !char.is_ascii_alphanumeric() && (char != '_' && char != '-'))
+}
+
+impl Driver for CommentBlock {
+    type Parsed = Self;
+
+    fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
+        // TODO: Be stricter
+
+        let line = walker.read_eof()?.to_string();
+        if line.starts_with("///") {
+            walker.next();
+            walker.ensure_eof()?;
+            Ok(CommentBlock(line.replace("///", "").trim().to_string()))
+        } else {
+            Err(Error::Todo)
+        }
+    }
 }
 
 impl Driver for Type {

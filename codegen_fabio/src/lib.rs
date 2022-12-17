@@ -19,6 +19,9 @@ enum AST {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+struct CommentBlock(String);
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 enum Primitive {
     Char,
     UnsignedChar,
@@ -137,20 +140,12 @@ impl<R: Read> Walker<R> {
     fn read_until(&mut self, token: char) -> Result<&str> {
         self.read_until_fn(|char| char == token, false)
     }
-    // TODO: Shorted name
-    fn read_until_one_of(&mut self, tokens: &[char]) -> Result<&str> {
-        self.read_until_fn(|char| tokens.iter().any(|c| c == &char), false)
-    }
-    // TODO: Is this needed?
-    fn read_until_non_alphanumeric(&mut self) -> Result<&str> {
-        self.read_until_fn(|char| !char.is_alphanumeric(), false)
-    }
     // TODO: Write more tests for this.
     fn read_until_separator(&mut self) -> Result<&str> {
         self.read_until_fn(|char| char == ' ' || char == '\n', true)
     }
     fn read_eof(&mut self) -> Result<&str> {
-        self.read_until_fn(|char| false, true)
+        self.read_until_fn(|_| false, true)
     }
     fn ensure_consume_fn<F>(&mut self, custom: F, ensure: EnsureVariant) -> Result<usize>
     where
@@ -199,11 +194,6 @@ impl<R: Read> Walker<R> {
             Err(Error::Todo)
         }
     }
-    fn ensure_space(&mut self) -> Result<()> {
-        let amt = self.ensure_fn(|char| char == ' ', EnsureVariant::AtLeast(1))?;
-        self.reader.consume(amt);
-        Ok(())
-    }
     fn ensure_separator(&mut self) -> Result<()> {
         let amt = self.ensure_fn(
             |char| char == ' ' || char == '\n',
@@ -214,12 +204,6 @@ impl<R: Read> Walker<R> {
     }
     fn ensure_one_semicolon(&mut self) -> Result<()> {
         let amt = self.ensure_fn(|char| char == ';', EnsureVariant::Exactly(1))?;
-        self.reader.consume(amt);
-        Ok(())
-    }
-    // TODO: Is this needed?
-    fn ensure_newline(&mut self) -> Result<()> {
-        let amt = self.ensure_fn(|char| char == '\n', EnsureVariant::AtLeast(1))?;
         self.reader.consume(amt);
         Ok(())
     }
