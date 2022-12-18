@@ -46,7 +46,7 @@ fn drive_function_name_with_params() {
 }
 
 #[test]
-fn drive_function_name_with_params_markers() {
+fn drive_function_name_with_markers_params() {
     let expected = FunctionNameWithParams {
         name: "some_func".to_string(),
         params: vec![

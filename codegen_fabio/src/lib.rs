@@ -158,7 +158,7 @@ impl<R: Read> Walker<R> {
             return Err(Error::Eof);
         }
 
-        Ok(&decoded[..counter])
+        Ok(decoded[..counter].trim())
     }
     // Convenience method.
     fn read_until(&mut self, token: char) -> Result<&str> {
