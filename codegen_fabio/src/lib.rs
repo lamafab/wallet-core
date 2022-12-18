@@ -149,7 +149,7 @@ impl<R: Read> Walker<R> {
                 break;
             }
 
-            counter += 1;
+            counter += char.len_utf8();
         }
 
         self.last_read_amt = counter;
@@ -186,7 +186,7 @@ impl<R: Read> Walker<R> {
                 break;
             }
 
-            counter += 1;
+            counter += char.len_utf8();
 
             if let EnsureVariant::Exactly(exact) = ensure {
                 if exact == counter {

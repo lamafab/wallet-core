@@ -311,9 +311,7 @@ impl Driver for AST {
             }
 
             let token = walker
-                .read_until_fn(|char| char == '\n', true)
-                .unwrap()
-                .to_string();
+                .read_until_fn(|char| char == '\n', true)?;
 
             let token_len = token.len();
             dbg!(&token);
@@ -328,10 +326,11 @@ impl Driver for AST {
                     .unwrap()
                     .to_string();
                 slice.push(';');
+
                 let mut w = Walker::from(slice.as_str());
                 dbg!(&slice);
+
                 if let Ok(func) = Function::drive(&mut w) {
-                    println!(">>> PASSED!");
                     ast.push(crate::AstVariants::Function(func));
                     walker.next();
                     walker.ensure_one_semicolon().unwrap();
