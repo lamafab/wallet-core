@@ -342,6 +342,7 @@ impl Driver for AST {
                 let mut w = Walker::from(slice.as_str());
                 dbg!(&slice);
 
+                /*
                 if let Ok(func) = Function::drive(&mut w) {
                     ast.push(crate::AstVariants::Function(func));
                     walker.next();
@@ -351,13 +352,16 @@ impl Driver for AST {
                         .unwrap();
                     continue;
                 }
+                */
             }
 
+            /*
             walker.last_read_amt = token_len;
             walker.next();
             walker
                 .ensure_consume_fn(|char| char == '\n', crate::EnsureVariant::AtLeast(0))
                 .unwrap();
+             */
         }
 
         Ok(ast)

@@ -216,15 +216,6 @@ impl<R: Read> Walker<R> {
         Err(Error::Todo)
     }
     // Convenience method.
-    fn ensure_consume_fn<F>(&mut self, custom: F, ensure: EnsureVariant) -> Result<usize>
-    where
-        F: Fn(char) -> bool,
-    {
-        let amt = self.ensure_fn(custom, ensure)?;
-        self.reader.consume(amt);
-        Ok(amt)
-    }
-    // Convenience method.
     fn ensure_eof(&mut self) -> Result<()> {
         let read = self.read_until_fn(|_| false, true)?;
         if read.is_empty() {
@@ -232,21 +223,6 @@ impl<R: Read> Walker<R> {
         } else {
             Err(Error::Todo)
         }
-    }
-    // Convenience method.
-    fn ensure_separator(&mut self) -> Result<()> {
-        let amt = self.ensure_fn(
-            |char| char == ' ' || char == '\n',
-            EnsureVariant::AtLeast(1),
-        )?;
-        self.reader.consume(amt);
-        Ok(())
-    }
-    // Convenience method.
-    fn ensure_one_semicolon(&mut self) -> Result<()> {
-        let amt = self.ensure_fn(|char| char == ';', EnsureVariant::Exactly(1))?;
-        self.reader.consume(amt);
-        Ok(())
     }
     // Consume reader and move on with the next data.
     fn next(&mut self) {
