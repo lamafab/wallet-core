@@ -74,7 +74,7 @@ struct FunctionNameWithParams {
 enum Marker {
     Recognized(SpecialMarker),
     // TODO: Should this be `Other`?
-    Other(Other),
+    Other(String),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -145,7 +145,6 @@ impl<R: Read> Walker<R> {
     {
         let buffer = self.reader.fill_buf().unwrap();
         let decoded = str::from_utf8(buffer).unwrap();
-        //dbg!(decoded);
 
         let mut completed = false;
         let mut content_reached = false;
@@ -166,18 +165,11 @@ impl<R: Read> Walker<R> {
             }
         }
 
-        //dbg!(counter);
-        //dbg!(&decoded[..counter]);
-        //dbg!(&decoded[..counter].trim());
-
         self.last_read_amt = counter;
 
         if !eof_ok && !completed {
             return Err(Error::Eof);
         }
-
-        //dbg!(&decoded[..counter]);
-        //dbg!(&decoded[..counter].trim());
 
         // Return read content and remove remaining space/newline (if used in `custom`).
         Ok(decoded[..counter].trim())
@@ -236,7 +228,6 @@ impl Engine {
             let mut walker = Walker::new(file);
             let ast = AST::drive(&mut walker)?;
 
-            //dbg!(&ast);
             let out = converter::rust::convert(&ast);
             println!("{out}");
         }

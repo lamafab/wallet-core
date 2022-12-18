@@ -2,7 +2,7 @@ use crate::{CommentBlock, Driver, Walker};
 
 mod drive_function;
 mod drive_types;
-mod driver;
+mod driver_basics;
 
 #[test]
 fn drive_comment_block() {

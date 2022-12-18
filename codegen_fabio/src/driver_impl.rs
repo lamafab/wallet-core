@@ -326,7 +326,6 @@ impl Driver for AST {
                 Err(err) => return Err(err),
             };
 
-            dbg!(&line);
             let origin_amt = walker.last_read_amt;
 
             // Some components can be identified upfront.
@@ -382,11 +381,9 @@ impl Driver for Marker {
         }
 
         let word_string = word.to_string();
-
-        // TODO...
         walker.next();
 
-        Ok(Marker::Other(Other(word_string)))
+        Ok(Marker::Other(word_string))
     }
 }
 
