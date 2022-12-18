@@ -1,4 +1,4 @@
-use crate::{AstVariants, Function, Primitive, Type, AST};
+use crate::{AstVariants, Function, Primitive, Type, Ast};
 
 fn type_to_c_str(ty: &Type) -> &'static str {
     match ty {
@@ -50,7 +50,7 @@ fn convert_param_names_only_to_string(func: &Function) -> String {
 }
 
 // TODO: Consider using (Buf-)Write(r).
-pub(crate) fn convert(ast: &AST) -> String {
+pub(crate) fn convert(ast: &Ast) -> String {
     let mut out = String::new();
 
     // Prepare "extern C" block.

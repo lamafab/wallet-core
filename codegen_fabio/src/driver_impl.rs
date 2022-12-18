@@ -1,6 +1,6 @@
 use crate::{
     AstVariants, CommentBlock, Driver, Error, Function, FunctionNameWithParams, FunctionParam,
-    Marker, Other, Primitive, Result, Struct, Type, Walker, AST,
+    Marker, Other, Primitive, Result, Struct, Type, Walker, Ast,
 };
 use std::io::Read;
 use std::{primitive, str};
@@ -309,13 +309,13 @@ impl Driver for Struct {
     }
 }
 
-impl Driver for AST {
+impl Driver for Ast {
     type Parsed = Self;
 
-    // TODO: This should just parse a single component, the `Engine` should be
+    // TODO: This should just parse a single component, the caller should be
     // responsible for feeding it the entire file(s).
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
-        let mut ast = AST::new();
+        let mut ast = Ast::new();
 
         loop {
             walker.next();

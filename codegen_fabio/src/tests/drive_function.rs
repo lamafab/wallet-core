@@ -1,6 +1,6 @@
 use crate::{
-    Driver, Error, Function, FunctionNameWithParams, FunctionParam, Marker, Other, Primitive,
-    Struct, Type, Walker,
+    Driver, Function, FunctionNameWithParams, FunctionParam, Marker, Other, Primitive,
+    Type, Walker,
 };
 
 #[test]

@@ -1,4 +1,4 @@
-use crate::{Driver, Error, Other, Primitive, Struct, Type, Walker};
+use crate::{Driver, Other, Primitive, Struct, Type, Walker};
 
 #[test]
 fn drive_other_token_strictness_check() {

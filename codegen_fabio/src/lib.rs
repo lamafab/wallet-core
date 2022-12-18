@@ -5,24 +5,25 @@ mod tests;
 
 use std::fmt::Display;
 use std::io::{BufRead, BufReader, Read};
+use std::fs::File;
 use std::{str, vec};
 
+pub type Result<T> = std::result::Result<T, Error>;
+
 #[derive(Debug, Clone, Eq, PartialEq)]
-enum Error {
+pub enum Error {
     Todo,
     Eof,
 }
 
-type Result<T> = std::result::Result<T, Error>;
-
 #[derive(Debug, Clone, Eq, PartialEq)]
-struct AST {
+struct Ast {
     list: Vec<AstVariants>,
 }
 
-impl AST {
+impl Ast {
     fn new() -> Self {
-        AST { list: vec![] }
+        Ast { list: vec![] }
     }
     fn push(&mut self, variant: AstVariants) {
         self.list.push(variant);
@@ -52,18 +53,6 @@ enum Primitive {
     Bool,
 }
 
-struct Typedef;
-struct Include;
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-struct Other(String);
-
-impl Display for Other {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct FunctionNameWithParams {
     name: String,
@@ -72,8 +61,6 @@ struct FunctionNameWithParams {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 enum Marker {
-    Recognized(SpecialMarker),
-    // TODO: Should this be `Other`?
     Other(String),
 }
 
@@ -113,6 +100,23 @@ struct FunctionParam {
     name: String,
     ty: Type,
     markers: Vec<Marker>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+struct Other(String);
+
+impl Display for Other {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+pub fn start_parser(path: &str) -> Result<String> {
+    let file = File::open(path).unwrap();
+    let mut walker = Walker::new(file);
+    let ast = Ast::drive(&mut walker)?;
+
+    Ok(converter::rust::convert(&ast))
 }
 
 trait Driver {
@@ -202,43 +206,9 @@ impl<R: Read> Walker<R> {
     }
 }
 
-enum EnsureVariant {
-    AtLeast(usize),
-    Exactly(usize),
-}
-
-use std::fs::File;
-
-struct Engine {
-    // TODO: Use `Path`
-    paths: Vec<String>,
-}
-
-impl Engine {
-    // TODO: Take `Path` here.
-    fn new_path(path: &str) -> Self {
-        // TODO: Maybe should check whether the path actually exists.
-        Engine {
-            paths: vec![path.to_string()],
-        }
-    }
-    fn start(&self) -> Result<()> {
-        for path in &self.paths {
-            let file = File::open(path).unwrap();
-            let mut walker = Walker::new(file);
-            let ast = AST::drive(&mut walker)?;
-
-            let out = converter::rust::convert(&ast);
-            println!("{out}");
-        }
-
-        Ok(())
-    }
-}
-
 #[test]
 #[ignore]
-fn test_engine() {
-    let engine = Engine::new_path("../include/TrustWalletCore/TWString.h");
-    engine.start().unwrap();
+fn test_parser() {
+    let out = start_parser("../include/TrustWalletCore/TWString.h").unwrap();
+    println!("{out}");
 }
