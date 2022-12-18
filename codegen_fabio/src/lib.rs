@@ -4,25 +4,40 @@ mod driver_impl;
 mod tests;
 
 use std::fmt::Display;
-use std::io::{BufRead, BufReader, Read};
-use std::{str, vec};
+use std::io::{BufRead, BufReader, Read, Error as IoError};
+use std::fs::File;
+use std::str::{self, Utf8Error};
 
-#[derive(Debug, Clone, Eq, PartialEq)]
-enum Error {
+pub type Result<T> = std::result::Result<T, Error>;
+
+#[derive(Debug)]
+pub enum Error {
     Todo,
     Eof,
+    Io(IoError),
+    Utf8Error(Utf8Error)
 }
 
-type Result<T> = std::result::Result<T, Error>;
+impl From<IoError> for Error {
+    fn from(err: IoError) -> Self {
+        Error::Io(err)
+    }
+}
+
+impl From<Utf8Error> for Error {
+    fn from(err: Utf8Error) -> Self {
+        Error::Utf8Error(err)
+    }
+}
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-struct AST {
+struct Ast {
     list: Vec<AstVariants>,
 }
 
-impl AST {
+impl Ast {
     fn new() -> Self {
-        AST { list: vec![] }
+        Ast { list: vec![] }
     }
     fn push(&mut self, variant: AstVariants) {
         self.list.push(variant);
@@ -32,11 +47,13 @@ impl AST {
 #[derive(Debug, Clone, Eq, PartialEq)]
 enum AstVariants {
     Function(Function),
+    Other(Other),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct CommentBlock(String);
 
+// TODO: Not fully complete yet.
 #[derive(Debug, Clone, Eq, PartialEq)]
 enum Primitive {
     Char,
@@ -50,18 +67,6 @@ enum Primitive {
     Bool,
 }
 
-struct Typedef;
-struct Include;
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-struct Other(String);
-
-impl Display for Other {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct FunctionNameWithParams {
     name: String,
@@ -70,9 +75,7 @@ struct FunctionNameWithParams {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 enum Marker {
-    Recognized(SpecialMarker),
-    // TODO: Should this be `Other`?
-    Other(Other),
+    Other(String),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -91,6 +94,9 @@ impl Display for Struct {
 #[derive(Debug, Clone, Eq, PartialEq)]
 enum Type {
     Primitive(Primitive),
+    // TODO: Const should not be implemented for each type variant individually.
+    ConstPrimitive(Primitive),
+    ConstOther(Other),
     Struct(Struct),
     Custom(Other),
 }
@@ -110,6 +116,26 @@ struct FunctionParam {
     markers: Vec<Marker>,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+struct Other(String);
+
+impl Display for Other {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+pub fn start_parser(path: &str) -> Result<String> {
+    let file = File::open(path)?;
+    let mut walker = Walker::new(file);
+    let ast = Ast::drive(&mut walker)?;
+
+    Ok(converter::rust::convert(&ast))
+}
+
+/// Implementors of this trait consume data from the `Walker` and use the
+/// provided information to generate the parsed type (or might fail trying so).
+/// Type implementations are in the 'driver_impl' module.
 trait Driver {
     type Parsed;
 
@@ -122,6 +148,8 @@ impl<'a> From<&'a str> for Walker<&'a [u8]> {
     }
 }
 
+/// Low-level reader over a stream of bytes. This is primarily how a `Driver`
+/// consumes data.
 struct Walker<R: Read> {
     reader: BufReader<R>,
     last_read_amt: usize,
@@ -138,18 +166,26 @@ impl<R: Read> Walker<R> {
     where
         F: Fn(char) -> bool,
     {
-        let buffer = self.reader.fill_buf().unwrap();
-        let decoded = str::from_utf8(buffer).unwrap();
+        let buffer = self.reader.fill_buf()?;
+        let decoded = str::from_utf8(buffer)?;
 
         let mut completed = false;
+        let mut content_reached = false;
         let mut counter = 0;
         for char in decoded.chars() {
+            // Explicitly ignore leading spaces/newlines.
+            if !content_reached && (char == ' ' || char == '\n') {
+                counter += 1;
+                continue;
+            }
+
+            content_reached = true;
+            counter += char.len_utf8();
+
             if custom(char) {
                 completed = true;
                 break;
             }
-
-            counter += char.len_utf8();
         }
 
         self.last_read_amt = counter;
@@ -158,7 +194,8 @@ impl<R: Read> Walker<R> {
             return Err(Error::Eof);
         }
 
-        Ok(&decoded[..counter])
+        // Return read content and remove remaining space/newline (if used in `custom`).
+        Ok(decoded[..counter].trim())
     }
     // Convenience method.
     fn read_until(&mut self, token: char) -> Result<&str> {
@@ -172,46 +209,6 @@ impl<R: Read> Walker<R> {
     fn read_eof(&mut self) -> Result<&str> {
         self.read_until_fn(|_| false, true)
     }
-    // TODO: Maybe rename this, given that it does not consume the reader.
-    fn ensure_fn<F>(&mut self, custom: F, ensure: EnsureVariant) -> Result<usize>
-    where
-        F: Fn(char) -> bool,
-    {
-        let buffer = self.reader.fill_buf().unwrap();
-        let decoded = str::from_utf8(buffer).unwrap();
-
-        let mut counter = 0;
-        for char in decoded.chars() {
-            if !custom(char) {
-                break;
-            }
-
-            counter += char.len_utf8();
-
-            if let EnsureVariant::Exactly(exact) = ensure {
-                if exact == counter {
-                    return Ok(counter);
-                }
-            }
-        }
-
-        if let EnsureVariant::AtLeast(at_least) = ensure {
-            if counter >= at_least {
-                return Ok(counter);
-            }
-        }
-
-        Err(Error::Todo)
-    }
-    // Convenience method.
-    fn ensure_consume_fn<F>(&mut self, custom: F, ensure: EnsureVariant) -> Result<usize>
-    where
-        F: Fn(char) -> bool,
-    {
-        let amt = self.ensure_fn(custom, ensure)?;
-        self.reader.consume(amt);
-        Ok(amt)
-    }
     // Convenience method.
     fn ensure_eof(&mut self) -> Result<()> {
         let read = self.read_until_fn(|_| false, true)?;
@@ -221,68 +218,16 @@ impl<R: Read> Walker<R> {
             Err(Error::Todo)
         }
     }
-    // Convenience method.
-    fn ensure_separator(&mut self) -> Result<()> {
-        let amt = self.ensure_fn(
-            |char| char == ' ' || char == '\n',
-            EnsureVariant::AtLeast(1),
-        )?;
-        self.reader.consume(amt);
-        Ok(())
-    }
-    // Convenience method.
-    fn ensure_one_semicolon(&mut self) -> Result<()> {
-        let amt = self.ensure_fn(|char| char == ';', EnsureVariant::Exactly(1))?;
-        self.reader.consume(amt);
-        Ok(())
-    }
     // Consume reader and move on with the next data.
     fn next(&mut self) {
         self.reader.consume(self.last_read_amt);
         self.last_read_amt = 0;
     }
-    fn is_eof(&mut self) -> Result<bool> {
-        Ok(self.reader.fill_buf().unwrap().is_empty())
-    }
-}
-
-enum EnsureVariant {
-    AtLeast(usize),
-    Exactly(usize),
-}
-
-use std::fs::File;
-
-struct Engine {
-    // TODO: Use `Path`
-    paths: Vec<String>,
-}
-
-impl Engine {
-    // TODO: Take `Path` here.
-    fn new_path(path: &str) -> Self {
-        // TODO: Maybe should check whether the path actually exists.
-        Engine {
-            paths: vec![path.to_string()],
-        }
-    }
-    fn start(&self) -> Result<()> {
-        for path in &self.paths {
-            let file = File::open(path).unwrap();
-            let mut walker = Walker::new(file);
-            let ast = AST::drive(&mut walker)?;
-
-            dbg!(&ast);
-            let out = converter::rust::convert(&ast);
-            println!("{out}");
-        }
-
-        Ok(())
-    }
 }
 
 #[test]
-fn test_engine() {
-    let engine = Engine::new_path("../include/TrustWalletCore/TWString.h");
-    engine.start().unwrap();
+#[ignore]
+fn test_parser() {
+    let out = start_parser("../include/TrustWalletCore/TWString.h").unwrap();
+    println!("{out}");
 }

@@ -1,4 +1,4 @@
-use crate::{AstVariants, Function, Primitive, Type, AST};
+use crate::{AstVariants, Function, Primitive, Type, Ast};
 
 fn type_to_c_str(ty: &Type) -> &'static str {
     match ty {
@@ -13,6 +13,8 @@ fn type_to_c_str(ty: &Type) -> &'static str {
             Primitive::UnsignedLong => "libc::c_ulong",
             Primitive::Bool => "bool",
         },
+        Type::ConstPrimitive(primitive) => type_to_c_str(&Type::Primitive(primitive.clone())),
+        Type::ConstOther(other) => type_to_c_str(&Type::Custom(other.clone())),
         Type::Custom(_) => "*const u8",
         Type::Struct(_) => "*const u8",
     }
@@ -48,7 +50,7 @@ fn convert_param_names_only_to_string(func: &Function) -> String {
 }
 
 // TODO: Consider using (Buf-)Write(r).
-pub(crate) fn convert(ast: &AST) -> String {
+pub(crate) fn convert(ast: &Ast) -> String {
     let mut out = String::new();
 
     // Prepare "extern C" block.
@@ -79,10 +81,13 @@ pub(crate) fn convert(ast: &AST) -> String {
                 return_type = type_to_c_str(&func.return_ty),
             ));
 
-			let param_names = convert_param_names_only_to_string(func);
-			out.push_str(&format!("    unsafe {{ {func_name}({param_names}) }}\n", func_name = func.name));
+            let param_names = convert_param_names_only_to_string(func);
+            out.push_str(&format!(
+                "    unsafe {{ {func_name}({param_names}) }}\n",
+                func_name = func.name
+            ));
 
-			out.push_str("}\n\n");
+            out.push_str("}\n\n");
         }
     }
 
