@@ -329,12 +329,14 @@ impl Driver for Ast {
 
             let origin_amt = walker.last_read_amt;
 
-            // Some components can be identified upfront.
+            // TODO: Some components can be identified upfront...
             if line.starts_with("//") {
                 // TODO
-            } else if line.starts_with("#define") {
+            } else if line.starts_with("#") {
                 // TODO
             } else if line.starts_with("#include") {
+                // TODO
+            } else if line.starts_with("#if") {
                 // TODO
             }
             // Handle components with no clear indicator
