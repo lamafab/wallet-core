@@ -14,11 +14,11 @@ fn drive_other_token_strictness_check() {
         Other::drive(&mut walker).unwrap()
     );
 
-    // No spaces allowed
+    // No spaces allowed in `Other`.
     let mut walker = Walker::from("some other");
     assert!(Other::drive(&mut walker).is_err());
 
-    // No newlines allowed
+    // No newlines allowed in`Other`.
     let mut walker = Walker::from("some\nother");
     assert!(Other::drive(&mut walker).is_err());
 }
@@ -119,11 +119,11 @@ fn drive_primitives_token_strictness_check() {
         Primitive::drive(&mut walker).unwrap(),
     );
 
-    // Some invalid types
+    // Some invalid primitives.
     let mut walker = Walker::from("some");
     assert!(Primitive::drive(&mut walker).is_err());
 
-    let mut walker = Walker::from("some");
+    let mut walker = Walker::from("some other");
     assert!(Primitive::drive(&mut walker).is_err());
 }
 

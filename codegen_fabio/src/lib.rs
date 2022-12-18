@@ -270,6 +270,7 @@ impl Engine {
 }
 
 #[test]
+#[ignore]
 fn test_engine() {
     let engine = Engine::new_path("../include/TrustWalletCore/TWString.h");
     engine.start().unwrap();
