@@ -3,12 +3,23 @@ use crate::{Driver, Error, Other, Primitive, Struct, Type, Walker};
 #[test]
 fn drive_other_token_strictness_check() {
     let mut walker = Walker::from("some ");
-    assert!(Other::drive(&mut walker).is_err());
+    assert_eq!(
+        Other("some".to_string()),
+        Other::drive(&mut walker).unwrap()
+    );
 
-    let mut walker = Walker::from(" some");
-    assert!(Other::drive(&mut walker).is_err());
+    let mut walker = Walker::from(" \nsome");
+    assert_eq!(
+        Other("some".to_string()),
+        Other::drive(&mut walker).unwrap()
+    );
 
+    // No spaces allowed
     let mut walker = Walker::from("some other");
+    assert!(Other::drive(&mut walker).is_err());
+
+    // No newlines allowed
+    let mut walker = Walker::from("some\nother");
     assert!(Other::drive(&mut walker).is_err());
 }
 
@@ -42,13 +53,23 @@ fn drive_other_valid_drives() {
 #[test]
 fn drive_types_token_strictness_check() {
     let mut walker = Walker::from("int ");
-    assert!(Type::drive(&mut walker).is_err());
+    assert_eq!(
+        Type::Primitive(Primitive::Int),
+        Type::drive(&mut walker).unwrap()
+    );
 
     let mut walker = Walker::from(" char");
-    assert!(Type::drive(&mut walker).is_err());
+    assert_eq!(
+        Type::Primitive(Primitive::Char),
+        Type::drive(&mut walker).unwrap()
+    );
 
-    let mut walker = Walker::from("int char");
-    assert!(Type::drive(&mut walker).is_err());
+    // This is allowed.
+    let mut walker = Walker::from("unsigned\nchar");
+    assert_eq!(
+        Type::Primitive(Primitive::UnsignedChar),
+        Type::drive(&mut walker).unwrap()
+    );
 }
 
 #[test]
@@ -87,13 +108,16 @@ fn drive_type_valid_types() {
 #[test]
 fn drive_primitives_token_strictness_check() {
     let mut walker = Walker::from("char ");
-    assert!(Primitive::drive(&mut walker).is_err());
+    assert_eq!(Primitive::Char, Primitive::drive(&mut walker).unwrap(),);
 
     let mut walker = Walker::from(" char");
-    assert!(Primitive::drive(&mut walker).is_err());
+    assert_eq!(Primitive::Char, Primitive::drive(&mut walker).unwrap(),);
 
-    let mut walker = Walker::from("char int");
-    assert!(Primitive::drive(&mut walker).is_err());
+    let mut walker = Walker::from("\nunsigned int");
+    assert_eq!(
+        Primitive::UnsignedInt,
+        Primitive::drive(&mut walker).unwrap(),
+    );
 
     // Some invalid types
     let mut walker = Walker::from("some");

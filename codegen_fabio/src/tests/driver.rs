@@ -23,9 +23,6 @@ fn read_until_token_first() {
     let sample = " some\n";
     let mut walker = Walker::new(sample.as_bytes());
 
-    assert_eq!("", walker.read_until_separator().unwrap());
-    walker.next();
-
     assert_eq!("some", walker.read_until_separator().unwrap());
     walker.next();
 

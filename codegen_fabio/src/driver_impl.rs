@@ -55,7 +55,7 @@ impl Driver for Function {
                 params = f.params;
                 break;
             }
-            
+
             let maybe_marker = walker.read_until_separator()?;
             let mut w = Walker::from(maybe_marker);
             if let Ok(marker) = Marker::drive(&mut w) {
@@ -64,7 +64,7 @@ impl Driver for Function {
                 continue;
             }
 
-            return Err(Error::Todo)
+            return Err(Error::Todo);
         }
 
         // Parse additional markers at the end of the function
@@ -98,7 +98,7 @@ impl Driver for Function {
         let semi = walker.read_eof()?;
         dbg!(semi);
         if semi != ";" {
-            return Err(Error::Todo)
+            return Err(Error::Todo);
         }
 
         walker.next();
@@ -118,7 +118,7 @@ impl Driver for FunctionNameWithParams {
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
         // Parse function name.
         let buffer = walker.read_until('(')?;
-        let function_name = buffer[..buffer.len()-1].trim().to_string();
+        let function_name = buffer[..buffer.len() - 1].trim().to_string();
 
         dbg!(&function_name);
 
@@ -131,7 +131,7 @@ impl Driver for FunctionNameWithParams {
         // Parse parameters
         let mut params = vec![];
         let buffer = walker.read_until(')')?;
-        let param_body = &buffer[..buffer.len()-1];
+        let param_body = &buffer[..buffer.len() - 1];
         dbg!(param_body);
 
         // TODO: Rename
@@ -159,7 +159,7 @@ impl Driver for FunctionNameWithParams {
                 dbg!(maybe_marker);
                 if maybe_marker.is_empty() {
                     if param_name.is_none() {
-                        return Err(Error::Todo)
+                        return Err(Error::Todo);
                     }
 
                     markers.pop();
@@ -229,7 +229,6 @@ impl Driver for Primitive {
         let primitive = match word {
             "unsigned" => {
                 walker.next();
-                walker.ensure_separator()?;
 
                 match Primitive::drive(walker)? {
                     Primitive::Char => Primitive::UnsignedChar,
@@ -243,7 +242,6 @@ impl Driver for Primitive {
             }
             "signed" => {
                 walker.next();
-                walker.ensure_separator()?;
 
                 let primitive = Primitive::drive(walker)?;
                 match primitive {
@@ -279,8 +277,10 @@ impl Driver for Other {
             return Err(Error::Todo);
         }
         let other = Other(other);
+
         walker.next();
         walker.ensure_eof()?;
+
         Ok(other)
     }
 }
@@ -293,7 +293,6 @@ impl Driver for Struct {
 
         let strct = if prefix == "struct" {
             walker.next();
-            walker.ensure_separator()?;
 
             let name = walker.read_until_separator()?;
             if !name.is_empty() {
@@ -324,8 +323,7 @@ impl Driver for AST {
                 break;
             }
 
-            let token = walker
-                .read_until_fn(|char| char == '\n', true)?;
+            let token = walker.read_until_fn(|char| char == '\n', true)?;
 
             let token_len = token.len();
             dbg!(&token);
