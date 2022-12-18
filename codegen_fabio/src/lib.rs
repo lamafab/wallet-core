@@ -38,6 +38,7 @@ enum AstVariants {
 #[derive(Debug, Clone, Eq, PartialEq)]
 struct CommentBlock(String);
 
+// TODO: Not fully complete yet.
 #[derive(Debug, Clone, Eq, PartialEq)]
 enum Primitive {
     Char,
@@ -92,6 +93,9 @@ impl Display for Struct {
 #[derive(Debug, Clone, Eq, PartialEq)]
 enum Type {
     Primitive(Primitive),
+    // TODO: Const should not be implemented for each type variant individually.
+    ConstPrimitive(Primitive),
+    ConstOther(Other),
     Struct(Struct),
     Custom(Other),
 }

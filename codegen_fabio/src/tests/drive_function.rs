@@ -78,9 +78,9 @@ fn drive_function_name_with_markers_params() {
 
 #[test]
 fn drive_function_full() {
-    //let sample = "int* _NotNull some_func(int my_var, bool some) OtherMarker;";
-    let sample =
-        "bool TWStringEqual(TWString* _Nonnull lhs, TWString* _Nonnull rhs) TW_VISIBILITY_DEFAULT;";
+    let sample = "const int* _NotNull some_func(int my_var, bool some) OtherMarker;";
+    //let sample =
+        //"bool TWStringEqual(const TWString* _Nonnull lhs, TWString* _Nonnull rhs) TW_VISIBILITY_DEFAULT;";
     let mut walker = Walker::from(sample);
 
     let res = Function::drive(&mut walker).unwrap();

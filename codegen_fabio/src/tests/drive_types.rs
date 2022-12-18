@@ -177,3 +177,24 @@ fn drive_primitives_valid_drives() {
     let mut walker = Walker::from("bool");
     assert_eq!(Primitive::Bool, Primitive::drive(&mut walker).unwrap());
 }
+
+#[test]
+fn drive_types_const() {
+    let mut walker = Walker::from("const int");
+    assert_eq!(
+        Type::ConstPrimitive(Primitive::Int),
+        Type::drive(&mut walker).unwrap()
+    );
+
+    let mut walker = Walker::from("const char*");
+    assert_eq!(
+        Type::ConstOther(Other("char*".to_string())),
+        Type::drive(&mut walker).unwrap()
+    );
+
+    let mut walker = Walker::from("const some");
+    assert_eq!(
+        Type::ConstOther(Other("some".to_string())),
+        Type::drive(&mut walker).unwrap()
+    );
+}

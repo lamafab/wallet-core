@@ -13,6 +13,8 @@ fn type_to_c_str(ty: &Type) -> &'static str {
             Primitive::UnsignedLong => "libc::c_ulong",
             Primitive::Bool => "bool",
         },
+        Type::ConstPrimitive(primitive) => type_to_c_str(&Type::Primitive(primitive.clone())),
+        Type::ConstOther(other) => type_to_c_str(&Type::Custom(other.clone())),
         Type::Custom(_) => "*const u8",
         Type::Struct(_) => "*const u8",
     }

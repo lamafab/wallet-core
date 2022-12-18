@@ -196,6 +196,16 @@ impl Driver for Type {
             Type::Primitive(primitive)
         } else if walker.read_until_separator()? == "struct" {
             Type::Struct(Struct::drive(walker)?)
+        } else if walker.read_until_separator()? == "const" {
+            walker.next();
+
+            let mut w = Walker::from(walker.read_until_separator()?);
+            if let Ok(primitive) = Primitive::drive(&mut w) {
+                Type::ConstPrimitive(primitive)
+            } else {
+                let mut w = Walker::from(walker.read_until_separator()?);
+                Type::ConstOther(Other::drive(&mut w)?)
+            }
         } else if let Ok(other) = Other::drive(walker) {
             Type::Custom(other)
         } else {
@@ -316,6 +326,7 @@ impl Driver for AST {
                 Err(err) => return Err(err),
             };
 
+            dbg!(&line);
             let origin_amt = walker.last_read_amt;
 
             // Some components can be identified upfront.
@@ -333,7 +344,7 @@ impl Driver for AST {
                     Ok(line) => line,
                     Err(Error::Eof) => {
                         continue;
-                    },
+                    }
                     Err(err) => return Err(err),
                 };
 
