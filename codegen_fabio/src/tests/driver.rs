@@ -19,10 +19,11 @@ fn read_until() {
 }
 
 #[test]
-fn read_until_token_first() {
+fn read_until_separator() {
     let sample = " some\n";
     let mut walker = Walker::new(sample.as_bytes());
 
+    // `read_until_separator` allows EOF
     assert_eq!("some", walker.read_until_separator().unwrap());
     walker.next();
 
@@ -36,5 +37,15 @@ fn read_until_eof_error() {
     let sample = "this is some data";
     let mut walker = Walker::new(sample.as_bytes());
 
+    // Does not allow EOF
     assert_eq!(Error::Eof, walker.read_until('\n').unwrap_err());
+    walker.next();
+}
+
+#[test]
+fn read_lines() {
+    let sample = "first\n\nthird";
+    let mut walker = Walker::new(sample.as_bytes());
+
+    // TODO...
 }

@@ -146,7 +146,7 @@ impl<R: Read> Walker<R> {
         let mut content_reached = false;
         let mut counter = 0;
         for char in decoded.chars() {
-            // Explicitly ignore leading spaces/newlines
+            // Explicitly ignore leading spaces/newlines.
             if !content_reached && (char == ' ' || char == '\n') {
                 counter += 1;
                 continue;
@@ -161,12 +161,17 @@ impl<R: Read> Walker<R> {
             }
         }
 
+        //dbg!(counter);
+        //dbg!(&decoded[..counter]);
+        //dbg!(&decoded[..counter].trim());
+
         self.last_read_amt = counter;
 
         if !eof_ok && !completed {
             return Err(Error::Eof);
         }
 
+        //dbg!(&decoded[..counter]);
         //dbg!(&decoded[..counter].trim());
 
         // Return read content and remove remaining space/newline (if used in `custom`).
@@ -184,37 +189,6 @@ impl<R: Read> Walker<R> {
     fn read_eof(&mut self) -> Result<&str> {
         self.read_until_fn(|_| false, true)
     }
-    // TODO: Maybe rename this, given that it does not consume the reader.
-    fn ensure_fn<F>(&mut self, custom: F, ensure: EnsureVariant) -> Result<usize>
-    where
-        F: Fn(char) -> bool,
-    {
-        let buffer = self.reader.fill_buf().unwrap();
-        let decoded = str::from_utf8(buffer).unwrap();
-
-        let mut counter = 0;
-        for char in decoded.chars() {
-            counter += char.len_utf8();
-
-            if !custom(char) {
-                break;
-            }
-
-            if let EnsureVariant::Exactly(exact) = ensure {
-                if exact == counter {
-                    return Ok(counter);
-                }
-            }
-        }
-
-        if let EnsureVariant::AtLeast(at_least) = ensure {
-            if counter >= at_least {
-                return Ok(counter);
-            }
-        }
-
-        Err(Error::Todo)
-    }
     // Convenience method.
     fn ensure_eof(&mut self) -> Result<()> {
         let read = self.read_until_fn(|_| false, true)?;
@@ -228,9 +202,6 @@ impl<R: Read> Walker<R> {
     fn next(&mut self) {
         self.reader.consume(self.last_read_amt);
         self.last_read_amt = 0;
-    }
-    fn is_eof(&mut self) -> Result<bool> {
-        Ok(self.reader.fill_buf().unwrap().is_empty())
     }
 }
 

@@ -33,8 +33,6 @@ impl Driver for Function {
             Type::drive(&mut w)?
         };
 
-        dbg!(&return_ty);
-
         // Check for possible markers, function name and function params.
         let mut markers = vec![];
         let name;
@@ -46,11 +44,8 @@ impl Driver for Function {
 
             let maybe_func_params = walker.read_until(')')?;
             let mut w = Walker::from(maybe_func_params);
-            dbg!(maybe_func_params);
 
             if let Ok(f) = FunctionNameWithParams::drive(&mut w) {
-                dbg!(&f);
-
                 name = f.name;
                 params = f.params;
                 break;
@@ -59,7 +54,6 @@ impl Driver for Function {
             let maybe_marker = walker.read_until_separator()?;
             let mut w = Walker::from(maybe_marker);
             if let Ok(marker) = Marker::drive(&mut w) {
-                dbg!(&marker);
                 markers.push(marker);
                 continue;
             }
@@ -71,9 +65,7 @@ impl Driver for Function {
         loop {
             walker.next();
 
-            dbg!(walker.read_eof()?);
             let maybe_marker = walker.read_until_separator()?;
-            dbg!(&maybe_marker);
 
             // TODO: This should be handled by `Marker::drive`.
             // Don't parse semicolon as a custom marker.
@@ -82,9 +74,7 @@ impl Driver for Function {
             }
 
             let mut w = Walker::from(maybe_marker);
-
             if let Ok(marker) = Marker::drive(&mut w) {
-                dbg!(&marker);
                 markers.push(marker);
             } else {
                 walker.next();
@@ -92,11 +82,8 @@ impl Driver for Function {
             }
         }
 
-        dbg!(walker.read_eof()?);
-
         // Insist on semicolon termination
         let semi = walker.read_eof()?;
-        dbg!(semi);
         if semi != ";" {
             return Err(Error::Todo);
         }
@@ -120,8 +107,6 @@ impl Driver for FunctionNameWithParams {
         let buffer = walker.read_until('(')?;
         let function_name = buffer[..buffer.len() - 1].trim().to_string();
 
-        dbg!(&function_name);
-
         if !valid_var_name(&function_name) {
             return Err(Error::Todo);
         }
@@ -132,12 +117,10 @@ impl Driver for FunctionNameWithParams {
         let mut params = vec![];
         let buffer = walker.read_until(')')?;
         let param_body = &buffer[..buffer.len() - 1];
-        dbg!(param_body);
 
         // TODO: Rename
         let chunks = param_body.split(',').collect::<Vec<&str>>();
         for chunk in chunks {
-            dbg!(&chunk);
             let mut chunk_walker = Walker::from(chunk.trim());
 
             // Parameter type
@@ -145,8 +128,6 @@ impl Driver for FunctionNameWithParams {
                 let mut w = Walker::from(chunk_walker.read_until_separator()?);
                 Type::drive(&mut w)?
             };
-
-            dbg!(&param_ty);
 
             // Parse the parameter name and possible markers.
             let mut markers = vec![];
@@ -156,7 +137,6 @@ impl Driver for FunctionNameWithParams {
 
                 // TODO: Comment on behavior
                 let maybe_marker = chunk_walker.read_until_separator()?;
-                dbg!(maybe_marker);
                 if maybe_marker.is_empty() {
                     if param_name.is_none() {
                         return Err(Error::Todo);
@@ -168,16 +148,12 @@ impl Driver for FunctionNameWithParams {
 
                 let mut w = Walker::from(maybe_marker);
                 if let Ok(marker) = Marker::drive(&mut w) {
-                    dbg!(&marker);
                     param_name = Some(maybe_marker.to_string());
                     markers.push(marker);
                 }
             }
 
             chunk_walker.next();
-
-            dbg!(&param_name);
-            dbg!(&markers);
 
             params.push(FunctionParam {
                 // Panic implies bug.
@@ -188,8 +164,6 @@ impl Driver for FunctionNameWithParams {
         }
 
         walker.next();
-
-        dbg!(walker.read_eof()?);
         walker.ensure_eof()?;
 
         Ok(FunctionNameWithParams {
@@ -313,55 +287,60 @@ impl Driver for Struct {
 impl Driver for AST {
     type Parsed = Self;
 
-    // TODO: Experimenting around, clean this all up.
-    // TODO: This should not loop, the `Engine` should be responsible for reading the full file.
+    // TODO: This should just parse a single component, the `Engine` should be
+    // responsible for feeding it the entire file(s).
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
         let mut ast = AST::new();
 
+        let mut counter = 0;
         loop {
-            if walker.is_eof()? {
+            counter += 1;
+            /*
+            if counter == 20 {
                 break;
             }
+            */
 
-            let token = walker.read_until_fn(|char| char == '\n', true)?;
+            let line = match walker.read_until('\n') {
+                Ok(line) => line.to_string(),
+                Err(Error::Eof) => {
+                    break;
+                }
+                Err(err) => return Err(err)
+            };
 
-            let token_len = token.len();
-            dbg!(&token);
+            let origin_amt = walker.last_read_amt;
+            dbg!(&line);
 
-            if token.starts_with("//") {
+            // TODO: handle other components...
+            if line.starts_with("") {
                 // TODO
-            } else {
-                // Assume function
-                // TODO: Implement a `read_until_with` method
-                let mut slice = walker
-                    .read_until_fn(|char| char == ';', true)
-                    .unwrap()
-                    .to_string();
-                slice.push(';');
+            } else if line.starts_with("//") {
+                // TODO
+            } else if line.starts_with("#define") {
+                // TODO
+            } else if line.starts_with("#include") {
+                // TODO
+            }
+            // Handle components with no clear indicator
+            else {
+                // We _assume_ its a function and try to parse it.
+                let maybe_function = walker
+                    .read_until(';')?;
 
-                let mut w = Walker::from(slice.as_str());
-                dbg!(&slice);
-
-                /*
-                if let Ok(func) = Function::drive(&mut w) {
-                    ast.push(crate::AstVariants::Function(func));
-                    walker.next();
-                    walker.ensure_one_semicolon().unwrap();
-                    walker
-                        .ensure_consume_fn(|char| char == '\n', crate::EnsureVariant::AtLeast(0))
-                        .unwrap();
+                let mut w = Walker::from(maybe_function);
+                if let Ok(function) = Function::drive(&mut w) {
+                    ast.push(AstVariants::Function(function));
+                    walker.last_read_amt = w.last_read_amt;
                     continue;
                 }
-                */
+
+                // TODO: handle other components...
             }
 
-            /*
-            walker.last_read_amt = token_len;
+            // TODO: Find a cleaner way to handle this.
+            walker.last_read_amt = origin_amt;
             walker.next();
-            walker
-                .ensure_consume_fn(|char| char == '\n', crate::EnsureVariant::AtLeast(0))
-                .unwrap();
-             */
         }
 
         Ok(ast)
