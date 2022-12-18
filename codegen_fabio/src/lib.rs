@@ -4,16 +4,30 @@ mod driver_impl;
 mod tests;
 
 use std::fmt::Display;
-use std::io::{BufRead, BufReader, Read};
+use std::io::{BufRead, BufReader, Read, Error as IoError};
 use std::fs::File;
-use std::{str, vec};
+use std::str::{self, Utf8Error};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug)]
 pub enum Error {
     Todo,
     Eof,
+    Io(IoError),
+    Utf8Error(Utf8Error)
+}
+
+impl From<IoError> for Error {
+    fn from(err: IoError) -> Self {
+        Error::Io(err)
+    }
+}
+
+impl From<Utf8Error> for Error {
+    fn from(err: Utf8Error) -> Self {
+        Error::Utf8Error(err)
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -112,13 +126,16 @@ impl Display for Other {
 }
 
 pub fn start_parser(path: &str) -> Result<String> {
-    let file = File::open(path).unwrap();
+    let file = File::open(path)?;
     let mut walker = Walker::new(file);
     let ast = Ast::drive(&mut walker)?;
 
     Ok(converter::rust::convert(&ast))
 }
 
+/// Implementors of this trait consume data from the `Walker` and use the
+/// provided information to generate the parsed type (or might fail trying so).
+/// Type implementations are in the 'driver_impl' module.
 trait Driver {
     type Parsed;
 
@@ -131,6 +148,8 @@ impl<'a> From<&'a str> for Walker<&'a [u8]> {
     }
 }
 
+/// Low-level reader over a stream of bytes. This is primarily how a `Driver`
+/// consumes data.
 struct Walker<R: Read> {
     reader: BufReader<R>,
     last_read_amt: usize,
@@ -147,8 +166,8 @@ impl<R: Read> Walker<R> {
     where
         F: Fn(char) -> bool,
     {
-        let buffer = self.reader.fill_buf().unwrap();
-        let decoded = str::from_utf8(buffer).unwrap();
+        let buffer = self.reader.fill_buf()?;
+        let decoded = str::from_utf8(buffer)?;
 
         let mut completed = false;
         let mut content_reached = false;

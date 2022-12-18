@@ -1,4 +1,4 @@
-use crate::{Error, Walker};
+use crate::Walker;
 
 #[test]
 fn read_until() {
@@ -38,6 +38,6 @@ fn read_until_eof_error() {
     let mut walker = Walker::new(sample.as_bytes());
 
     // Does not allow EOF
-    assert_eq!(Error::Eof, walker.read_until('\n').unwrap_err());
+    assert!(walker.read_until('\n').is_err());
     walker.next();
 }

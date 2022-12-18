@@ -3,7 +3,7 @@ use crate::{
     Marker, Other, Primitive, Result, Struct, Type, Walker, Ast,
 };
 use std::io::Read;
-use std::{primitive, str};
+use std::str;
 
 fn valid_var_name(name: &str) -> bool {
     // Name cannot be empty.
@@ -11,7 +11,8 @@ fn valid_var_name(name: &str) -> bool {
         return false;
     }
 
-    //Name cannot start with a number.
+    // Name cannot start with a number.
+    // Panic implies bug.
     if name.chars().next().unwrap().is_numeric() {
         return false;
     }
