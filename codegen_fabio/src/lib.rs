@@ -143,16 +143,16 @@ impl<R: Read> Walker<R> {
         //dbg!(decoded);
 
         let mut completed = false;
+        let mut content_reached = false;
         let mut counter = 0;
         for char in decoded.chars() {
             // Explicitly ignore leading spaces/newlines
-            /*
-            if char == ' ' || char == '\n' {
+            if !content_reached && (char == ' ' || char == '\n') {
                 counter += 1;
                 continue;
             }
-            */
 
+            content_reached = true;
             counter += char.len_utf8();
 
             if custom(char) {

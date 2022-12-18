@@ -74,23 +74,34 @@ impl Driver for Function {
             dbg!(walker.read_eof()?);
             let maybe_marker = walker.read_until_separator()?;
             dbg!(&maybe_marker);
+
+            // TODO: This should be handled by `Marker::drive`.
+            // Don't parse semicolon as a custom marker.
+            if maybe_marker == ";" {
+                break;
+            }
+
             let mut w = Walker::from(maybe_marker);
 
             if let Ok(marker) = Marker::drive(&mut w) {
                 dbg!(&marker);
                 markers.push(marker);
             } else {
+                walker.next();
                 break;
             }
         }
 
-        walker.next();
-
-        // Expect semicolon.
         dbg!(walker.read_eof()?);
-        walker.read_until(';')?;
+
+        // Insist on semicolon termination
+        let semi = walker.read_eof()?;
+        dbg!(semi);
+        if semi != ";" {
+            return Err(Error::Todo)
+        }
+
         walker.next();
-        walker.ensure_eof()?;
 
         Ok(Function {
             name,
