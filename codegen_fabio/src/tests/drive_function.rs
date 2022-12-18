@@ -35,14 +35,19 @@ fn drive_function_name_with_params() {
         FunctionNameWithParams::drive(&mut walker).unwrap()
     );
 
-    // Note tha space at the end.
-    let sample = "some_func(int my_var, bool some) ";
+    let sample = "some_func(int my_var, bool some) \n";
     let mut walker = Walker::from(sample);
-    assert!(FunctionNameWithParams::drive(&mut walker).is_err());
+    assert_eq!(
+        expected,
+        FunctionNameWithParams::drive(&mut walker).unwrap()
+    );
 
-    let sample = " some_func(int my_var, bool some)";
+    let sample = "\nsome_func(int my_var, bool some)";
     let mut walker = Walker::from(sample);
-    assert!(FunctionNameWithParams::drive(&mut walker).is_err());
+    assert_eq!(
+        expected,
+        FunctionNameWithParams::drive(&mut walker).unwrap()
+    );
 }
 
 #[test]

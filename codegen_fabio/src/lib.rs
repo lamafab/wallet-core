@@ -140,10 +140,19 @@ impl<R: Read> Walker<R> {
     {
         let buffer = self.reader.fill_buf().unwrap();
         let decoded = str::from_utf8(buffer).unwrap();
+        //dbg!(decoded);
 
         let mut completed = false;
         let mut counter = 0;
         for char in decoded.chars() {
+            // Explicitly ignore leading spaces/newlines
+            /*
+            if char == ' ' || char == '\n' {
+                counter += 1;
+                continue;
+            }
+            */
+
             counter += char.len_utf8();
 
             if custom(char) {
@@ -158,6 +167,9 @@ impl<R: Read> Walker<R> {
             return Err(Error::Eof);
         }
 
+        //dbg!(&decoded[..counter].trim());
+
+        // Return read content and remove remaining space/newline (if used in `custom`).
         Ok(decoded[..counter].trim())
     }
     // Convenience method.

@@ -46,7 +46,11 @@ impl Driver for Function {
 
             let maybe_func_params = walker.read_until(')')?;
             let mut w = Walker::from(maybe_func_params);
+            dbg!(maybe_func_params);
+
             if let Ok(f) = FunctionNameWithParams::drive(&mut w) {
+                dbg!(&f);
+
                 name = f.name;
                 params = f.params;
                 break;
@@ -55,6 +59,7 @@ impl Driver for Function {
             let maybe_marker = walker.read_until_separator()?;
             let mut w = Walker::from(maybe_marker);
             if let Ok(marker) = Marker::drive(&mut w) {
+                dbg!(&marker);
                 markers.push(marker);
                 continue;
             }
@@ -66,18 +71,25 @@ impl Driver for Function {
         loop {
             walker.next();
 
+            dbg!(walker.read_eof()?);
             let maybe_marker = walker.read_until_separator()?;
+            dbg!(&maybe_marker);
             let mut w = Walker::from(maybe_marker);
 
             if let Ok(marker) = Marker::drive(&mut w) {
+                dbg!(&marker);
                 markers.push(marker);
             } else {
                 break;
             }
         }
 
+        walker.next();
+
         // Expect semicolon.
+        dbg!(walker.read_eof()?);
         walker.read_until(';')?;
+        walker.next();
         walker.ensure_eof()?;
 
         Ok(Function {
@@ -95,7 +107,7 @@ impl Driver for FunctionNameWithParams {
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
         // Parse function name.
         let buffer = walker.read_until('(')?;
-        let function_name = buffer[..buffer.len()-1].to_string();
+        let function_name = buffer[..buffer.len()-1].trim().to_string();
 
         dbg!(&function_name);
 
