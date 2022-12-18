@@ -304,27 +304,19 @@ impl Driver for AST {
     // TODO: This should not loop, the `Engine` should be responsible for reading the full file.
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
         let mut ast = AST::new();
-        let mut counter = 0;
 
         loop {
-            if counter == 10 {
-                //break;
+            if walker.is_eof()? {
+                break;
             }
-            counter += 1;
 
             let token = walker
-                .read_until_fn(|char| char == '\n' || char == '\r', true)
+                .read_until_fn(|char| char == '\n', true)
                 .unwrap()
                 .to_string();
+
             let token_len = token.len();
             dbg!(&token);
-
-            if token.is_empty() {
-                let rest = walker.read_eof().unwrap();
-                if rest.is_empty() {
-                    break;
-                }
-            }
 
             if token.starts_with("//") {
                 // TODO

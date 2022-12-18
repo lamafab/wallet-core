@@ -241,6 +241,9 @@ impl<R: Read> Walker<R> {
         self.reader.consume(self.last_read_amt);
         self.last_read_amt = 0;
     }
+    fn is_eof(&mut self) -> Result<bool> {
+        Ok(self.reader.fill_buf().unwrap().is_empty())
+    }
 }
 
 enum EnsureVariant {
