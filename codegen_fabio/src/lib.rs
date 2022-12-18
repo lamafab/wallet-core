@@ -144,12 +144,12 @@ impl<R: Read> Walker<R> {
         let mut completed = false;
         let mut counter = 0;
         for char in decoded.chars() {
+            counter += char.len_utf8();
+
             if custom(char) {
                 completed = true;
                 break;
             }
-
-            counter += char.len_utf8();
         }
 
         self.last_read_amt = counter;
@@ -182,11 +182,11 @@ impl<R: Read> Walker<R> {
 
         let mut counter = 0;
         for char in decoded.chars() {
+            counter += char.len_utf8();
+
             if !custom(char) {
                 break;
             }
-
-            counter += char.len_utf8();
 
             if let EnsureVariant::Exactly(exact) = ensure {
                 if exact == counter {
