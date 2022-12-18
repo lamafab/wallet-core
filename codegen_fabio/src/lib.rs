@@ -32,6 +32,7 @@ impl AST {
 #[derive(Debug, Clone, Eq, PartialEq)]
 enum AstVariants {
     Function(Function),
+    Other(Other),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -231,7 +232,7 @@ impl Engine {
             let mut walker = Walker::new(file);
             let ast = AST::drive(&mut walker)?;
 
-            dbg!(&ast);
+            //dbg!(&ast);
             let out = converter::rust::convert(&ast);
             println!("{out}");
         }

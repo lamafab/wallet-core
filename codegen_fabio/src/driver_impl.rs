@@ -61,30 +61,45 @@ impl Driver for Function {
             return Err(Error::Todo);
         }
 
-        // Parse additional markers at the end of the function
-        loop {
-            walker.next();
+        walker.next();
 
+        // Parse additional markers at the end of the function
+        let mut semicolon_terminated = false;
+        loop {
             let maybe_marker = walker.read_until_separator()?;
 
             // TODO: This should be handled by `Marker::drive`.
             // Don't parse semicolon as a custom marker.
             if maybe_marker == ";" {
+                semicolon_terminated = true;
+                break;
+            } else if maybe_marker.is_empty() {
+                // EOF
                 break;
             }
 
-            let mut w = Walker::from(maybe_marker);
+            // If the marker is immediately followed by a semicolon, make sure to detect that.
+            let mut w = if let Some(stripped) = maybe_marker.strip_suffix(';') {
+                semicolon_terminated = true;
+                Walker::from(stripped)
+            } else {
+                semicolon_terminated = false;
+                Walker::from(maybe_marker)
+            };
+
             if let Ok(marker) = Marker::drive(&mut w) {
                 markers.push(marker);
             } else {
-                walker.next();
                 break;
             }
+
+            walker.next();
         }
 
+        walker.next();
+
         // Insist on semicolon termination
-        let semi = walker.read_eof()?;
-        if semi != ";" {
+        if !semicolon_terminated {
             return Err(Error::Todo);
         }
 
@@ -292,30 +307,19 @@ impl Driver for AST {
     fn drive<R: Read>(walker: &mut Walker<R>) -> Result<Self::Parsed> {
         let mut ast = AST::new();
 
-        let mut counter = 0;
         loop {
-            counter += 1;
-            /*
-            if counter == 20 {
-                break;
-            }
-            */
+            walker.next();
 
             let line = match walker.read_until('\n') {
                 Ok(line) => line.to_string(),
-                Err(Error::Eof) => {
-                    break;
-                }
-                Err(err) => return Err(err)
+                Err(Error::Eof) => break,
+                Err(err) => return Err(err),
             };
 
             let origin_amt = walker.last_read_amt;
-            dbg!(&line);
 
-            // TODO: handle other components...
-            if line.starts_with("") {
-                // TODO
-            } else if line.starts_with("//") {
+            // Some components can be identified upfront.
+            if line.starts_with("//") {
                 // TODO
             } else if line.starts_with("#define") {
                 // TODO
@@ -324,23 +328,31 @@ impl Driver for AST {
             }
             // Handle components with no clear indicator
             else {
-                // We _assume_ its a function and try to parse it.
-                let maybe_function = walker
-                    .read_until(';')?;
+                // We assume its a function and try to parse it.
+                let maybe_function = match walker.read_until(';') {
+                    Ok(line) => line,
+                    Err(Error::Eof) => {
+                        continue;
+                    },
+                    Err(err) => return Err(err),
+                };
 
                 let mut w = Walker::from(maybe_function);
                 if let Ok(function) = Function::drive(&mut w) {
                     ast.push(AstVariants::Function(function));
-                    walker.last_read_amt = w.last_read_amt;
                     continue;
                 }
 
                 // TODO: handle other components...
+
+                // Fallback
+                let mut w = Walker::from(walker.read_until_separator()?);
+                ast.push(AstVariants::Other(Other::drive(&mut w)?));
             }
 
-            // TODO: Find a cleaner way to handle this.
+            // Consume line, continue with next component.
+            // TODO: Find a cleaner way to do this.
             walker.last_read_amt = origin_amt;
-            walker.next();
         }
 
         Ok(ast)
