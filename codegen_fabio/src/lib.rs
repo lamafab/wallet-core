@@ -242,9 +242,9 @@ impl<R: Read> WalkerTwo<R> {
         self.read_until_fn(|char| char != ' ' && char != '\n')?;
         self.amt_read = self.amt_read.saturating_sub(1);
 
-        // Read until space/newline.
+        // Read until space/newline, trim suffix.
         self.read_until_fn(|char| char == ' ' || char == '\n')
-            .map(|str| str.map(|str| str.trim()))
+            .map(|str| str.map(|str| str.trim_end()))
     }
     pub fn read_until(&mut self, token: char) -> Result<Option<&str>> {
         self.read_until_fn(|char| char == token)
