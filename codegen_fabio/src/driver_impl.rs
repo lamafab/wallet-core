@@ -1,6 +1,6 @@
 use crate::{
-    AstVariants, CommentBlock, Driver, Error, Function, FunctionNameWithParams, FunctionParam,
-    Marker, Other, Primitive, Result, Struct, Type, Walker, Ast,
+    Ast, AstVariants, CommentBlock, Driver, Error, Function, FunctionNameWithParams, FunctionParam,
+    Marker, Other, Primitive, Result, Struct, Type, Walker,
 };
 use std::io::Read;
 use std::str;

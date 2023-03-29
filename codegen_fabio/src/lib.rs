@@ -4,8 +4,8 @@ mod driver_impl;
 mod tests;
 
 use std::fmt::Display;
-use std::io::{BufRead, BufReader, Read, Error as IoError};
 use std::fs::File;
+use std::io::{BufRead, BufReader, Error as IoError, Read};
 use std::str::{self, Utf8Error};
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -15,7 +15,7 @@ pub enum Error {
     Todo,
     Eof,
     Io(IoError),
-    Utf8Error(Utf8Error)
+    Utf8Error(Utf8Error),
 }
 
 impl From<IoError> for Error {
@@ -222,6 +222,47 @@ impl<R: Read> Walker<R> {
     fn next(&mut self) {
         self.reader.consume(self.last_read_amt);
         self.last_read_amt = 0;
+    }
+}
+
+struct WalkerTwo<R: Read> {
+    reader: BufReader<R>,
+    amt_read: usize,
+}
+
+impl<R: Read> WalkerTwo<R> {
+    fn new(reader: R) -> Self {
+        WalkerTwo {
+            reader: BufReader::new(reader),
+            amt_read: 0,
+        }
+    }
+    fn read_keyword(&mut self) {
+        //let buffer = self.read_until_fn(custom)
+    }
+    fn read_until_fn<F>(&mut self, custom: F) -> Result<Option<(usize, &str)>>
+    where
+        F: Fn(char) -> bool,
+    {
+        self.reader.consume(self.amt_read);
+
+        let reader_buf = self.reader.fill_buf()?;
+        let decoded = str::from_utf8(reader_buf)?;
+
+        let pos = decoded
+            .char_indices()
+            .find(|(_, char)| custom(*char))
+            .map(|(pos, _)| pos);
+
+        if pos.is_none() {
+            return Ok(None);
+        }
+
+        let pos = pos.unwrap() + 1;
+        self.amt_read = pos;
+
+        // Return read content and remove remaining space/newline (if used in `custom`).
+        Ok(Some((pos, &decoded[..pos])))
     }
 }
 

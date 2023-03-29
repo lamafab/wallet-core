@@ -1,4 +1,4 @@
-use crate::{AstVariants, Function, Primitive, Type, Ast};
+use crate::{Ast, AstVariants, Function, Primitive, Type};
 
 fn type_to_c_str(ty: &Type) -> &'static str {
     match ty {
