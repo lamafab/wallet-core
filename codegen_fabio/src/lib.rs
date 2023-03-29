@@ -225,7 +225,7 @@ impl<R: Read> Walker<R> {
     }
 }
 
-struct WalkerTwo<R: Read> {
+pub struct WalkerTwo<R: Read> {
     reader: BufReader<R>,
     amt_read: usize,
 }
@@ -237,14 +237,22 @@ impl<R: Read> WalkerTwo<R> {
             amt_read: 0,
         }
     }
-    pub fn read_keyword(&mut self) -> Result<()> {
-        let keyword = self.read_until_fn(|char| char == ' ' || char == '\n')?;
-        todo!()
+    pub fn read_keyword(&mut self) -> Result<Option<&str>> {
+        // Wipe leading spaces/newlines.
+        self.read_until_fn(|char| char != ' ' && char != '\n')?;
+        self.amt_read = self.amt_read.saturating_sub(1);
+
+        // Read until space/newline.
+        self.read_until_fn(|char| char == ' ' || char == '\n')
+            .map(|str| str.map(|str| str.trim()))
     }
-    pub fn read_until(&mut self, token: char) -> Result<Option<(usize, &str)>> {
+    pub fn read_until(&mut self, token: char) -> Result<Option<&str>> {
         self.read_until_fn(|char| char == token)
     }
-    pub fn read_until_fn<F>(&mut self, custom: F) -> Result<Option<(usize, &str)>>
+    // Read until the condition is met. Calling this function **always**
+    // consumes the data returned by the (potential) previous call and proceeds
+    // to the next data.
+    pub fn read_until_fn<F>(&mut self, custom: F) -> Result<Option<&str>>
     where
         F: Fn(char) -> bool,
     {
@@ -266,9 +274,9 @@ impl<R: Read> WalkerTwo<R> {
         self.amt_read = pos;
 
         // Return read content and remove remaining space/newline (if used in `custom`).
-        Ok(Some((pos, &decoded[..pos])))
+        Ok(Some(&decoded[..pos]))
     }
-    pub fn read_until_one_of(&mut self, tokens: &[char]) -> Result<Option<(usize, &str)>> {
+    pub fn read_until_one_of(&mut self, tokens: &[char]) -> Result<Option<&str>> {
         self.read_until_fn(|char| tokens.contains(&char))
     }
 }

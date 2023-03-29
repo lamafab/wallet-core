@@ -1,4 +1,25 @@
-use crate::Walker;
+use crate::{Walker, WalkerTwo};
+
+#[test]
+fn www_read_keyword() {
+    let sample = "this is\nsome\n $data\n";
+    let mut walker = WalkerTwo::new(sample.as_bytes());
+
+    assert_eq!("this", walker.read_keyword().unwrap().unwrap());
+    assert_eq!("is", walker.read_keyword().unwrap().unwrap());
+    assert_eq!("some", walker.read_keyword().unwrap().unwrap());
+    assert_eq!("$data", walker.read_keyword().unwrap().unwrap());
+}
+
+#[test]
+fn www_read_until() {
+    let sample = "this is\nsome\n $data\n";
+    let mut walker = WalkerTwo::new(sample.as_bytes());
+
+    assert_eq!("this is\n", walker.read_until('\n').unwrap().unwrap());
+    assert_eq!("some\n", walker.read_until('\n').unwrap().unwrap());
+    assert_eq!(" $data\n", walker.read_until('\n').unwrap().unwrap());
+}
 
 #[test]
 fn read_until() {
