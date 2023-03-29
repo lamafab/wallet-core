@@ -231,16 +231,20 @@ struct WalkerTwo<R: Read> {
 }
 
 impl<R: Read> WalkerTwo<R> {
-    fn new(reader: R) -> Self {
+    pub fn new(reader: R) -> Self {
         WalkerTwo {
             reader: BufReader::new(reader),
             amt_read: 0,
         }
     }
-    fn read_keyword(&mut self) {
-        //let buffer = self.read_until_fn(custom)
+    pub fn read_keyword(&mut self) -> Result<()> {
+        let keyword = self.read_until_fn(|char| char == ' ' || char == '\n')?;
+        todo!()
     }
-    fn read_until_fn<F>(&mut self, custom: F) -> Result<Option<(usize, &str)>>
+    pub fn read_until(&mut self, token: char) -> Result<Option<(usize, &str)>> {
+        self.read_until_fn(|char| char == token)
+    }
+    pub fn read_until_fn<F>(&mut self, custom: F) -> Result<Option<(usize, &str)>>
     where
         F: Fn(char) -> bool,
     {
@@ -263,6 +267,9 @@ impl<R: Read> WalkerTwo<R> {
 
         // Return read content and remove remaining space/newline (if used in `custom`).
         Ok(Some((pos, &decoded[..pos])))
+    }
+    pub fn read_until_one_of(&mut self, tokens: &[char]) -> Result<Option<(usize, &str)>> {
+        self.read_until_fn(|char| tokens.contains(&char))
     }
 }
 
