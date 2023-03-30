@@ -280,7 +280,6 @@ impl<R: Read> WalkerTwo<R> {
 
         let reader_buf = self.reader.fill_buf()?;
         let decoded = str::from_utf8(reader_buf)?;
-        let mut is_eof = false;
 
         dbg!(decoded);
 
@@ -288,10 +287,7 @@ impl<R: Read> WalkerTwo<R> {
             .char_indices()
             .find(|(_, char)| custom(*char))
             .map(|(pos, _)| pos + 1)
-            .unwrap_or_else(|| {
-                is_eof = true;
-                decoded.len()
-            });
+            .unwrap_or_else(|| decoded.len());
 
         match (pos, allow_eof) {
             (0, false) => return Err(Error::Eof),
