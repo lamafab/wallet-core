@@ -2,8 +2,44 @@ use crate::{Driver, DriverTwo, Other, Primitive, Struct, Type, Walker, WalkerTwo
 
 #[test]
 fn drive_primitives() {
+    let mut walker = WalkerTwo::from("char");
+    assert_eq!(Primitive::Char, Primitive::drive_two(walker).unwrap());
+
+    let mut walker = WalkerTwo::from("unsigned char");
+    assert_eq!(
+        Primitive::UnsignedChar,
+        Primitive::drive_two(walker).unwrap()
+    );
+
     let mut walker = WalkerTwo::from("int");
     assert_eq!(Primitive::Int, Primitive::drive_two(walker).unwrap());
+
+    let mut walker = WalkerTwo::from("unsigned int");
+    assert_eq!(
+        Primitive::UnsignedInt,
+        Primitive::drive_two(walker).unwrap()
+    );
+
+    let mut walker = WalkerTwo::from("short");
+    assert_eq!(Primitive::Short, Primitive::drive_two(walker).unwrap());
+
+    let mut walker = WalkerTwo::from("unsigned short");
+    assert_eq!(
+        Primitive::UnsignedShort,
+        Primitive::drive_two(walker).unwrap()
+    );
+
+    let mut walker = WalkerTwo::from("long");
+    assert_eq!(Primitive::Long, Primitive::drive_two(walker).unwrap());
+
+    let mut walker = WalkerTwo::from("unsigned long");
+    assert_eq!(
+        Primitive::UnsignedLong,
+        Primitive::drive_two(walker).unwrap()
+    );
+
+    let mut walker = WalkerTwo::from("bool");
+    assert_eq!(Primitive::Bool, Primitive::drive_two(walker).unwrap());
 }
 
 #[test]
