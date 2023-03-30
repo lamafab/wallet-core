@@ -18,6 +18,12 @@ pub enum Error {
     Utf8Error(Utf8Error),
 }
 
+impl<T> From<Option<T>> for Error {
+    fn from(_: Option<T>) -> Self {
+        Error::Eof
+    }
+}
+
 impl From<IoError> for Error {
     fn from(err: IoError) -> Self {
         Error::Io(err)
@@ -148,6 +154,18 @@ impl<'a> From<&'a str> for Walker<&'a [u8]> {
     }
 }
 
+impl<'a> From<&'a str> for WalkerTwo<&'a [u8]> {
+    fn from(buffer: &'a str) -> Self {
+        WalkerTwo::new(buffer.as_bytes())
+    }
+}
+
+trait DriverTwo {
+    type Parsed;
+
+    fn drive_two<R: Read>(_: WalkerTwo<R>) -> Result<Self::Parsed>;
+}
+
 /// Low-level reader over a stream of bytes. This is primarily how a `Driver`
 /// consumes data.
 struct Walker<R: Read> {
@@ -239,20 +257,22 @@ impl<R: Read> WalkerTwo<R> {
     }
     pub fn read_keyword(&mut self) -> Result<Option<&str>> {
         // Wipe leading spaces/newlines.
-        self.read_until_fn(|char| char != ' ' && char != '\n')?;
+        dbg!("Wipe leading spaces/newlines");
+        self.read_until_fn(|char| char != ' ' && char != '\n', true)?;
         self.amt_read = self.amt_read.saturating_sub(1);
 
         // Read until space/newline, trim suffix.
-        self.read_until_fn(|char| char == ' ' || char == '\n')
+        dbg!("Read until space/newline, trim suffix");
+        self.read_until_fn(|char| char == ' ' || char == '\n', true)
             .map(|str| str.map(|str| str.trim_end()))
     }
     pub fn read_until(&mut self, token: char) -> Result<Option<&str>> {
-        self.read_until_fn(|char| char == token)
+        self.read_until_fn(|char| char == token, false)
     }
     // Read until the condition is met. Calling this function **always**
     // consumes the data returned by the (potential) previous call and proceeds
     // to the next data.
-    pub fn read_until_fn<F>(&mut self, custom: F) -> Result<Option<&str>>
+    pub fn read_until_fn<F>(&mut self, custom: F, allow_eof: bool) -> Result<Option<&str>>
     where
         F: Fn(char) -> bool,
     {
@@ -260,24 +280,35 @@ impl<R: Read> WalkerTwo<R> {
 
         let reader_buf = self.reader.fill_buf()?;
         let decoded = str::from_utf8(reader_buf)?;
+        let mut is_eof = false;
+
+        dbg!(decoded);
 
         let pos = decoded
             .char_indices()
             .find(|(_, char)| custom(*char))
-            .map(|(pos, _)| pos);
+            .map(|(pos, _)| pos + 1)
+            .unwrap_or_else(|| {
+                is_eof = true;
+                decoded.len()
+            });
 
-        if pos.is_none() {
-            return Ok(None);
+        match (pos, allow_eof) {
+            (0, false) => return Err(Error::Eof),
+            (0, true) => return Ok(None),
+            _ => (),
         }
 
-        let pos = pos.unwrap() + 1;
         self.amt_read = pos;
+
+        dbg!(pos);
+        dbg!(&decoded[..pos]);
 
         // Return read content and remove remaining space/newline (if used in `custom`).
         Ok(Some(&decoded[..pos]))
     }
     pub fn read_until_one_of(&mut self, tokens: &[char]) -> Result<Option<&str>> {
-        self.read_until_fn(|char| tokens.contains(&char))
+        self.read_until_fn(|char| tokens.contains(&char), false)
     }
 }
 

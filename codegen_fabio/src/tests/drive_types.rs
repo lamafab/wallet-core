@@ -1,4 +1,10 @@
-use crate::{Driver, Other, Primitive, Struct, Type, Walker};
+use crate::{Driver, DriverTwo, Other, Primitive, Struct, Type, Walker, WalkerTwo};
+
+#[test]
+fn drive_primitives() {
+    let mut walker = WalkerTwo::from("int");
+    assert_eq!(Primitive::Int, Primitive::drive_two(walker).unwrap());
+}
 
 #[test]
 fn drive_other_token_strictness_check() {

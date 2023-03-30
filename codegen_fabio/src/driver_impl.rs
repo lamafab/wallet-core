@@ -1,6 +1,6 @@
 use crate::{
-    Ast, AstVariants, CommentBlock, Driver, Error, Function, FunctionNameWithParams, FunctionParam,
-    Marker, Other, Primitive, Result, Struct, Type, Walker,
+    Ast, AstVariants, CommentBlock, Driver, DriverTwo, Error, Function, FunctionNameWithParams,
+    FunctionParam, Marker, Other, Primitive, Result, Struct, Type, Walker, WalkerTwo,
 };
 use std::io::Read;
 use std::str;
@@ -217,6 +217,46 @@ impl Driver for Type {
         walker.ensure_eof()?;
 
         Ok(ty)
+    }
+}
+
+impl DriverTwo for Primitive {
+    type Parsed = Self;
+
+    fn drive_two<R: Read>(mut walker: WalkerTwo<R>) -> Result<Self::Parsed> {
+        let keyword = walker.read_keyword()?.ok_or(Error::Eof)?;
+
+        let primitive = match keyword {
+            "unsigned" => {
+                match Primitive::drive_two(walker)? {
+                    Primitive::Char => Primitive::UnsignedChar,
+                    Primitive::Int => Primitive::UnsignedInt,
+                    Primitive::Short => Primitive::UnsignedShort,
+                    Primitive::Long => Primitive::UnsignedLong,
+                    Primitive::Bool => panic!(),
+                    // Explicitly disallow all other.
+                    _ => return Err(Error::Todo),
+                }
+            }
+            "signed" => {
+                let primitive = Primitive::drive_two(walker)?;
+                match primitive {
+                    Primitive::Char | Primitive::Int | Primitive::Short | Primitive::Long => {
+                        primitive
+                    }
+                    // Explicitly disallow all other.
+                    _ => return Err(Error::Todo),
+                }
+            }
+            "char" => Primitive::Char,
+            "int" => Primitive::Int,
+            "short" => Primitive::Short,
+            "long" => Primitive::Long,
+            "bool" => Primitive::Bool,
+            _ => return Err(Error::Todo),
+        };
+
+        Ok(primitive)
     }
 }
 
