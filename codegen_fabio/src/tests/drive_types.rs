@@ -43,6 +43,19 @@ fn drive_primitives() {
 }
 
 #[test]
+fn drive_type_qualifiers() {
+    // TODO ...
+
+    let mut walker = WalkerTwo::from("char*");
+
+    let mut walker = WalkerTwo::from("char *");
+
+    let mut walker = WalkerTwo::from("const char*");
+
+    let mut walker = WalkerTwo::from("const char * function_name");
+}
+
+#[test]
 fn drive_other_token_strictness_check() {
     let mut walker = Walker::from("some ");
     assert_eq!(

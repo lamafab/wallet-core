@@ -96,6 +96,44 @@ impl Display for Struct {
     }
 }
 
+enum TypeQualifiers {
+    None(Type),
+    Const(Type),
+    Pointer(Type),
+    ConstPointer(Type),
+}
+
+impl DriverTwo for TypeQualifiers {
+    type Parsed = Self;
+
+    fn drive_two<R: Read>(mut walker: WalkerTwo<R>) -> Result<Self::Parsed> {
+        let keyword = walker.read_keyword()?.ok_or(Error::Eof)?;
+        // TODO...
+
+        let qualifier = match keyword {
+            "const" => {
+                let buffer = walker
+                    .read_until_one_of(&[' ', '*', '\n'], true)?
+                    .ok_or(Error::Eof)?;
+
+                if buffer.trim().ends_with('*') {
+                    // Create a new walker that does not include the asterisk.
+                    let walker = buffer[..buffer.len() - 1].into();
+                    return Ok(TypeQualifiers::ConstPointer(Type::drive_two(walker)?));
+                } else {
+                    return Ok(TypeQualifiers::Const(Type::drive_two(walker)?));
+                }
+
+                todo!()
+            }
+            "*" => TypeQualifiers::Pointer(Type::drive_two(walker)?),
+            _ => TypeQualifiers::None(Type::drive_two(walker)?),
+        };
+
+        Ok(qualifier)
+    }
+}
+
 // TODO: Handle pointers and consts.
 #[derive(Debug, Clone, Eq, PartialEq)]
 enum Type {
@@ -105,6 +143,14 @@ enum Type {
     ConstOther(Other),
     Struct(Struct),
     Custom(Other),
+}
+
+impl DriverTwo for Type {
+    type Parsed = Self;
+
+    fn drive_two<R: Read>(_: WalkerTwo<R>) -> Result<Self::Parsed> {
+        todo!()
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -255,6 +301,16 @@ impl<R: Read> WalkerTwo<R> {
             amt_read: 0,
         }
     }
+    // TODO: This should probably not exist
+    pub fn soft_clone(&mut self) -> Result<WalkerTwo<&[u8]>> {
+        let buffer = self.reader.fill_buf()?;
+        self.amt_read = 0;
+
+        Ok(WalkerTwo {
+            reader: BufReader::new(buffer),
+            amt_read: self.amt_read,
+        })
+    }
     pub fn read_keyword(&mut self) -> Result<Option<&str>> {
         // Wipe leading spaces/newlines.
         dbg!("Wipe leading spaces/newlines");
@@ -303,8 +359,8 @@ impl<R: Read> WalkerTwo<R> {
         // Return read content and remove remaining space/newline (if used in `custom`).
         Ok(Some(&decoded[..pos]))
     }
-    pub fn read_until_one_of(&mut self, tokens: &[char]) -> Result<Option<&str>> {
-        self.read_until_fn(|char| tokens.contains(&char), false)
+    pub fn read_until_one_of(&mut self, tokens: &[char], allow_eof: bool) -> Result<Option<&str>> {
+        self.read_until_fn(|char| tokens.contains(&char), allow_eof)
     }
 }
 
