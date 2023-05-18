@@ -29,6 +29,7 @@ pub fn custom_handle_stellar_passphrase() -> EnumInfo {
         is_public: true,
         value_type: TypeVariant::UInt32T,
         variants,
+        comments: vec![String::from("Stellar network passphrase string.")],
     }
 }
 
@@ -101,5 +102,9 @@ pub fn custom_handle_hrp() -> EnumInfo {
         is_public: true,
         value_type: TypeVariant::UInt32T,
         variants,
+        comments: vec![
+            String::from("Registered human-readable parts for BIP-0173"),
+            String::from("SeeAlso: https://github.com/satoshilabs/slips/blob/master/slip-0173.md"),
+        ],
     }
 }

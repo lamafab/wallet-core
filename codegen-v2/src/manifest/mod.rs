@@ -18,9 +18,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub struct TypeInfo {
     #[serde(flatten)]
     pub variant: TypeVariant,
-    pub is_constant: bool,
     pub is_nullable: bool,
-    pub is_pointer: bool,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -86,6 +84,8 @@ pub struct EnumInfo {
     pub value_type: TypeVariant,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub variants: Vec<EnumVariantInfo>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub comments: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -103,6 +103,8 @@ pub struct StructInfo {
     pub is_class: bool,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub fields: Vec<(String, TypeInfo)>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub comments: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -119,6 +121,8 @@ pub struct InitInfo {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeinitInfo {
     pub name: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub comments: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -62,6 +62,7 @@ pub fn process_c_grammar(dir: &CHeaderDirectory) -> Vec<FileInfo> {
                         is_public,
                         is_class,
                         fields: vec![],
+                        comments: vec![],
                     });
                 }
                 GHeaderFileItem::StructDecl(decl) => {
@@ -168,18 +169,12 @@ impl TypeInfo {
                     if keyword.0 == "TWData" {
                         return Ok(TypeInfo {
                             variant: TypeVariant::Data,
-                            // Is always const
-                            is_constant: true,
                             is_nullable,
-                            is_pointer: true,
                         });
                     } else if keyword.0 == "TWString" {
                         return Ok(TypeInfo {
                             variant: TypeVariant::String,
-                            // Is always const
-                            is_constant: true,
                             is_nullable,
-                            is_pointer: true,
                         });
                     }
                 }
@@ -187,7 +182,7 @@ impl TypeInfo {
             _ => {}
         }
 
-        let ((variant, is_pointer), is_constant) = match ty {
+        let ((variant, _is_pointer), _is_constant) = match ty {
             GType::Mutable(category) => (get_variant_pointer_check(category)?, false),
             GType::Const(category) => (get_variant_pointer_check(category)?, true),
             GType::Extern(_) => {
@@ -198,9 +193,7 @@ impl TypeInfo {
 
         Ok(TypeInfo {
             variant,
-            is_constant,
             is_nullable,
-            is_pointer,
         })
     }
 }
@@ -309,6 +302,7 @@ impl EnumInfo {
                     }
                 })
                 .collect(),
+            comments: vec![],
         })
     }
 }
@@ -344,6 +338,7 @@ impl StructInfo {
             is_public,
             is_class,
             fields,
+            comments: vec![],
         })
     }
 }
@@ -418,7 +413,10 @@ impl DeinitInfo {
     pub fn from_g_type(value: &GFunctionDecl) -> Result<Self> {
         let func = FunctionInfo::from_g_type(value)?;
 
-        Ok(DeinitInfo { name: func.name })
+        Ok(DeinitInfo {
+            name: func.name,
+            comments: vec![],
+        })
     }
 }
 
