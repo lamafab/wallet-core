@@ -211,11 +211,11 @@ pub struct GTypedef {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub struct GCommentLine(String);
+pub struct GCommentLine(pub String);
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct GCommentBlock {
-    lines: Vec<GCommentLine>,
+    pub lines: Vec<GCommentLine>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]

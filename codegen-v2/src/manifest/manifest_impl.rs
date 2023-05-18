@@ -38,6 +38,7 @@ pub fn process_c_grammar(dir: &CHeaderDirectory) -> Vec<FileInfo> {
             protos: vec![],
         };
 
+        let mut staged_comments = vec![];
         for item in items {
             match item {
                 GHeaderFileItem::Typedef(decl) => {
@@ -62,15 +63,23 @@ pub fn process_c_grammar(dir: &CHeaderDirectory) -> Vec<FileInfo> {
                         is_public,
                         is_class,
                         fields: vec![],
-                        comments: vec![],
+                        comments: staged_comments,
                     });
+
+                    staged_comments = vec![];
                 }
                 GHeaderFileItem::StructDecl(decl) => {
-                    let x = StructInfo::from_g_type(decl).unwrap();
+                    let mut x = StructInfo::from_g_type(decl).unwrap();
+                    x.comments = staged_comments;
+                    staged_comments = vec![];
+
                     file_info.structs.push(x);
                 }
                 GHeaderFileItem::EnumDecl(decl) => {
-                    let x = EnumInfo::from_g_type(decl).unwrap();
+                    let mut x = EnumInfo::from_g_type(decl).unwrap();
+                    x.comments = staged_comments;
+                    staged_comments = vec![];
+
                     file_info.enums.push(x);
                 }
                 GHeaderFileItem::FunctionDecl(decl) => {
@@ -80,27 +89,48 @@ pub fn process_c_grammar(dir: &CHeaderDirectory) -> Vec<FileInfo> {
                     if markers.contains(&GMarker::TwExportProperty)
                         || markers.contains(&GMarker::TwExportStaticProperty)
                     {
-                        let x = PropertyInfo::from_g_type(decl).unwrap();
+                        let mut x = PropertyInfo::from_g_type(decl).unwrap();
+                        x.comments = staged_comments;
+                        staged_comments = vec![];
+
                         file_info.properties.push(x);
                     }
                     // Handle methods
                     else {
                         // Detect constructor methods.
                         if decl.name.0.contains("Create") {
-                            let x = InitInfo::from_g_type(decl).unwrap();
+                            let mut x = InitInfo::from_g_type(decl).unwrap();
+                            x.comments = staged_comments;
+                            staged_comments = vec![];
+
                             file_info.inits.push(x);
                         }
                         // Delect deconstructor methods.
                         else if decl.name.0.contains("Delete") {
-                            let x = DeinitInfo::from_g_type(decl).unwrap();
+                            let mut x = DeinitInfo::from_g_type(decl).unwrap();
+                            x.comments = staged_comments;
+                            staged_comments = vec![];
+
                             file_info.deinits.push(x);
                         }
                         // Any any other function is just a method.
                         else {
-                            let x = FunctionInfo::from_g_type(decl).unwrap();
+                            let mut x = FunctionInfo::from_g_type(decl).unwrap();
+                            x.comments = staged_comments;
+                            staged_comments = vec![];
+
                             file_info.functions.push(x);
                         }
                     }
+                }
+                GHeaderFileItem::Comment(block) => {
+                    for line in &block.lines {
+                        staged_comments.push(line.0.replace("/// ", "").clone());
+                    }
+                }
+                GHeaderFileItem::Newline => {
+                    // Wipe staged comments.
+                    staged_comments = vec![];
                 }
                 _ => {}
             }
