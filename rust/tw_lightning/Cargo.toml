@@ -1,0 +1,12 @@
+[package]
+name = "tw_lightning"
+version = "0.1.0"
+edition = "2021"
+
+[workspace.package]
+version = "0.2.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+breez-sdk-core = { path = "breez-sdk/libs/sdk-core"}

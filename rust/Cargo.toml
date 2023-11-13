@@ -10,6 +10,7 @@ members = [
     "tw_hash",
     "tw_internet_computer",
     "tw_keypair",
+    "tw_lightning",
     "tw_memory",
     "tw_misc",
     "tw_move_parser",

@@ -21,7 +21,8 @@
 				"sswg.swift-lang",
 				"ms-vscode.cpptools",
 				"ms-vscode.cpptools-extension-pack",
-				"rebornix.Ruby"
+				"rebornix.Ruby",
+				"zxh404.vscode-proto3"
 			]
 		}
 	},
