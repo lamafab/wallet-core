@@ -3,12 +3,47 @@ syntax = "proto3";
 package TW.Lightning.Proto;
 option java_package = "wallet.core.jni.proto";
 
+message ReceivePaymentRequest {
+    // The amount in satoshis for this payment request
+    uint64 amount_msat = 1;
+    // The description for this payment request.
+    string description = 2;
+    // (Optional) preimage for this payment request. / If specified, it will be
+    //used instead of generating a new one.
+    bytes preimage = 3;
+    // (Optional) if set and valid, these fess options are used when a new
+    //channels is needed. / Otherwise the default fee options will be used.
+    OpeningFeeParams opening_fee_params = 4;
+    // (Optional) if set to true, then the bolt11 invoice returned includes the
+    //description hash.
+    bool use_description_hash = 5;
+    // (Optional) if specified, set the time the invoice is valid for, in
+    //seconds.
+    uint32 expiry = 6;
+    // (Optional) if specified, sets the min_final_cltv_expiry for the invoice
+    uint32 cltv = 7
+}
+
+message OpeningFeeParams {
+    // The minimum value in millisatoshi we will require for incoming HTLCs on
+    // the channel
+    uint64 min_msat = 1;
+    // The fee in ppm charged over liquidity when buying a channel
+    uint32 proportional = 2;
+    // The date and time this opening fee params promise expires, in RFC 3339 / ISO 8601 format
+    string valid_until = 3;
+    // The channel can be closed if not used within this duration in blocks
+    uint32 max_idle_time = 4;
+    uint32 max_client_to_self_delay = 5;
+    string promise = 6;
+}
+
 message SendPaymentRequest {
     // The bolt11 invoice
     string bolt11 = 1;
-    // The optional amount to pay in millisatoshis (1 sat = 1_000 msat). This
+    // (Optional) the amount to pay in millisatoshis (1 sat = 1_000 msat). This
     // should only be set when `bolt11` is a zero-amount invoice.
-    optional uint64 amount_msat = 2;
+    uint64 amount_msat = 2;
 }
 
 message LnInvoice {
@@ -23,10 +58,10 @@ message LnInvoice {
             uint32 fees_proportional_millionths = 4;
             /// The difference in CLTV values between this node and the next node.
             uint64 cltv_expiry_delta = 5;
-            /// The minimum value, in msat, which must be relayed to the next hop.
-            optional uint64 htlc_minimum_msat = 6;
-            /// The maximum value in msat available for routing with a single HTLC.
-            optional uint64 htlc_maximum_msat = 7;
+            /// (Optional) The minimum value, in msat, which must be relayed to the next hop.
+            uint64 htlc_minimum_msat = 6;
+            /// (Optional) The maximum value in msat available for routing with a single HTLC.
+            uint64 htlc_maximum_msat = 7;
         }
 
         repeated RouteHintHop hops = 1;
@@ -35,9 +70,12 @@ message LnInvoice {
     string bolt11 = 1;
     string payee_pubkey = 2;
     string payment_hash = 3;
-    optional string description = 4;
-    optional string description_hash = 5;
-    optional uint64 amount_msat = 6;
+    // (Optional)
+    string description = 4;
+    // (Optional)
+    string description_hash = 5;
+    // (Optional)
+    uint64 amount_msat = 6;
     uint64 timestamp = 7;
     uint64 expirty = 8;
     repeated RouteHint route_hints = 9;
@@ -49,22 +87,17 @@ message LnInvoice {
 message InvoiceParams {
     uint64 destination_invoice_amount_msat = 1;
     string description = 2;
-    optional bytes preimage = 3;
-    optional bool use_description_hash = 4;
-    optional uint32 expiry = 5;
-    optional int32 cltv  = 6;
+    // (Optional)
+    bytes preimage = 3;
+    // (Optional)
+    bool use_description_hash = 4;
+    // (Optional)
+    uint32 expiry = 5;
+    // (Optional)
+    int32 cltv  = 6;
 }
 
 message LspPaymentRegistrationParams {
-    message OpeningFeeParams {
-        uint64 min_msat = 1;
-        uint32 proportional = 2;
-        string valid_until = 3;
-        uint32 max_idle_time = 4;
-        uint32 max_client_to_self_delay = 5;
-        string promise = 6;
-    }
-
     string lsp_id = 1;
     string lsp_pubkey = 2;
     bytes payment_hash = 3;
@@ -72,5 +105,6 @@ message LspPaymentRegistrationParams {
     bytes destination = 5;
     int64 incoming_amount_msat = 6;
     int64 outgoing_amount_msat = 7;
-    optional OpeningFeeParams opening_fee_params = 8;
+    // (Optional)
+    OpeningFeeParams opening_fee_params = 8;
 }
