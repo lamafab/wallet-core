@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package TW.Lightning.Proto;
+option java_package = "wallet.core.jni.proto";
+
+message SendPaymentRequest {
+    // The bolt11 invoice
+    string bolt11 = 1;
+    // The optional amount to pay in millisatoshis (1 sat = 1_000 msat). This
+    // should only be set when `bolt11` is a zero-amount invoice.
+    uint64 amount_msat = 2;
+}
+
+message LnInvoice {
+    message RouteHint {
+        message RouteHintHop {
+            /// The node_id of the non-target end of the route
+            string src_node_id = 1;
+            /// The short_channel_id of this channel
+            uint64 short_channel_id = 2;
+            /// The fees which must be paid to use this channel
+            uint32 fees_base_msat = 3;
+            uint32 fees_proportional_millionths = 4;
+            /// The difference in CLTV values between this node and the next node.
+            uint64 cltv_expiry_delta = 5;
+            /// The minimum value, in msat, which must be relayed to the next hop.
+            uint64 htlc_minimum_msat = 6;
+            /// The maximum value in msat available for routing with a single HTLC.
+            uint64 htlc_maximum_msat = 7;
+        }
+
+        repeated RouteHintHop hops = 1;
+    }
+
+    string bolt11 = 1;
+    string payee_pubkey = 2;
+    string payment_hash = 3;
+    string description = 4;
+    string description_hash = 5;
+    uint64 amount_msat = 6;
+    uint64 timestamp = 7;
+    uint64 expirty = 8;
+    repeated RouteHint route_hints = 9;
+    bytes payment_secret = 10;
+    uint64 min_final_cltv_expirty_delta = 11;
+}
