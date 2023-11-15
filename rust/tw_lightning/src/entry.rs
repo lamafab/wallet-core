@@ -1,5 +1,3 @@
-use tw_proto::
-
 pub struct LightningEntry;
 
 impl LightningEntry {

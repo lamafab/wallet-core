@@ -4,6 +4,13 @@ package TW.Lightning.Proto;
 option java_package = "wallet.core.jni.proto";
 
 message ReceivePaymentRequest {
+    ReceivePaymentParams payment_request = 1;
+    bytes proto_lsp_info = 2;
+    bytes proto_node_peers = 3;
+    uint64 node_state_inbound_liquidity = 4;
+}
+
+message ReceivePaymentParams {
     // The amount in satoshis for this payment request
     uint64 amount_msat = 1;
     // The description for this payment request.
@@ -21,7 +28,7 @@ message ReceivePaymentRequest {
     //seconds.
     uint32 expiry = 6;
     // (Optional) if specified, sets the min_final_cltv_expiry for the invoice
-    uint32 cltv = 7
+    uint32 cltv = 7;
 }
 
 message OpeningFeeParams {
@@ -38,6 +45,29 @@ message OpeningFeeParams {
     string promise = 6;
 }
 
+message ReceivePaymentContext {
+    uint64 short_channel_id = 1;
+    uint64 destination_invoice_amount_msat = 2;
+    // (Optional)
+    OpeningFeeParams channel_opening_fee_params = 3;
+    bool open_channel_needed = 4;
+    // (Optional)
+    uint64 channel_fees_msat = 5;
+}
+
+message ReceivePaymentCheckLspHints {
+    string invoice  = 1;
+    ReceivePaymentParams payment_request = 2;
+    ReceivePaymentContext context = 3;
+    bytes proto_lsp_info = 4;
+}
+
+message ReceivePaymentCheckRegistration {
+    string invoice = 1;
+    ReceivePaymentParams payment_request = 2;
+    ReceivePaymentContext context = 3;
+}
+
 message SendPaymentRequest {
     // The bolt11 invoice
     string bolt11 = 1;
@@ -46,6 +76,33 @@ message SendPaymentRequest {
     uint64 amount_msat = 2;
 }
 
+// The parameters required for the `/cln.Node/Invoice` endpoint.
+message InvoiceParams {
+    uint64 destination_invoice_amount_msat = 1;
+    string description = 2;
+    // (Optional)
+    bytes preimage = 3;
+    // (Optional)
+    bool use_description_hash = 4;
+    // (Optional)
+    uint32 expiry = 5;
+    // (Optional)
+    int32 cltv  = 6;
+}
+
+message LspPaymentRegistrationParams {
+    string lsp_id = 1;
+    string lsp_pubkey = 2;
+    bytes payment_hash = 3;
+    bytes payment_secret = 4;
+    bytes destination = 5;
+    int64 incoming_amount_msat = 6;
+    int64 outgoing_amount_msat = 7;
+    // (Optional)
+    OpeningFeeParams opening_fee_params = 8;
+}
+
+// TODO: Is this needed?
 message LnInvoice {
     message RouteHint {
         message RouteHintHop {
@@ -81,30 +138,4 @@ message LnInvoice {
     repeated RouteHint route_hints = 9;
     bytes payment_secret = 10;
     uint64 min_final_cltv_expirty_delta = 11;
-}
-
-// The parameters required for the `/cln.Node/Invoice` endpoint.
-message InvoiceParams {
-    uint64 destination_invoice_amount_msat = 1;
-    string description = 2;
-    // (Optional)
-    bytes preimage = 3;
-    // (Optional)
-    bool use_description_hash = 4;
-    // (Optional)
-    uint32 expiry = 5;
-    // (Optional)
-    int32 cltv  = 6;
-}
-
-message LspPaymentRegistrationParams {
-    string lsp_id = 1;
-    string lsp_pubkey = 2;
-    bytes payment_hash = 3;
-    bytes payment_secret = 4;
-    bytes destination = 5;
-    int64 incoming_amount_msat = 6;
-    int64 outgoing_amount_msat = 7;
-    // (Optional)
-    OpeningFeeParams opening_fee_params = 8;
 }
