@@ -1,6 +1,6 @@
 pub mod entry;
-pub mod modules;
 pub mod mapping;
+pub mod modules;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
