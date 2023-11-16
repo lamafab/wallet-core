@@ -31,12 +31,15 @@ impl LightningEntry {
         // Map protobuf types.
         let req = mapping::receive_payment_request_from_proto(payment_request.unwrap()).unwrap();
 
-        // TODO:
-        let id = "".to_string();
-        let proto_lsp_info =
-            <breez_grpc::LspInformation as Message>::decode(blob_lsp_info.as_ref()).unwrap();
-        let lsp_info = mapping::lsp_information_from_proto(id, proto_lsp_info).unwrap();
+        // TODO: Id
+        // Map the proto blob into the native type.
+        let lsp_info = mapping::lsp_information_from_proto(
+            String::from("id"),
+            <breez_grpc::LspInformation as Message>::decode(blob_lsp_info.as_ref()).unwrap(),
+        )
+        .unwrap();
 
+        // Map the proto blob into the native type.
         let proto_node_peers =
             <greenlight::ListpeersResponse as Message>::decode(blob_node_peers.as_ref()).unwrap();
 
@@ -49,6 +52,7 @@ impl LightningEntry {
         )
         .unwrap();
 
+        // Map the native type into a protobuf message.
         let proto = mapping::proto_receive_payment_context_from_native(ctx);
         Ok(proto)
     }

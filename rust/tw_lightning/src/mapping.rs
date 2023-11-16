@@ -6,7 +6,10 @@ use breez_sdk_core::{
 };
 use tw_proto::Lightning::Proto;
 
-pub fn lsp_information_from_proto(id: String, proto: breez_grpc::LspInformation) -> Result<LspInformation> {
+pub fn lsp_information_from_proto(
+    id: String,
+    proto: breez_grpc::LspInformation,
+) -> Result<LspInformation> {
     let l = LspInformation {
         id,
         name: proto.name,
@@ -80,7 +83,9 @@ pub fn opening_fee_params_from_proto(proto: Proto::OpeningFeeParams) -> OpeningF
     }
 }
 
-pub fn proto_receive_payment_context_from_native(native: PreparedInvoiceContext) -> Proto::ReceivePaymentContext<'static> {
+pub fn proto_receive_payment_context_from_native(
+    native: PreparedInvoiceContext,
+) -> Proto::ReceivePaymentContext<'static> {
     let channel_opening_fee_params = if let Some(p) = native.channel_opening_fee_params {
         Some(Proto::OpeningFeeParams {
             min_msat: p.min_msat,
