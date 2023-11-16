@@ -3392,7 +3392,9 @@ dependencies = [
 name = "tw_lightning"
 version = "0.1.0"
 dependencies = [
+ "bitcoin 0.29.2",
  "breez-sdk-core",
+ "lightning-invoice 0.23.0",
  "prost",
  "tw_proto",
 ]
