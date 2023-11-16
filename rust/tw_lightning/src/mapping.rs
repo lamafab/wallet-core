@@ -83,6 +83,27 @@ pub fn opening_fee_params_from_proto(proto: Proto::OpeningFeeParams) -> OpeningF
     }
 }
 
+pub fn receive_payment_context_from_proto(
+    proto: Proto::ReceivePaymentContext,
+) -> PreparedInvoiceContext {
+    let channel_opening_fee_params = if let Some(params) = proto.channel_opening_fee_params {
+        Some(opening_fee_params_from_proto(params))
+    } else {
+        None
+    };
+
+    let ctx = PreparedInvoiceContext {
+        short_channel_id: proto.short_channel_id,
+        destination_invoice_amount_msat: proto.destination_invoice_amount_msat,
+        channel_opening_fee_params,
+        open_channel_needed: proto.open_channel_needed,
+        // TODO: Needs a `use_channel_fees_msat` param.
+        channel_fees_msat: Some(proto.channel_fees_msat),
+    };
+
+    todo!()
+}
+
 pub fn proto_receive_payment_context_from_native(
     native: PreparedInvoiceContext,
 ) -> Proto::ReceivePaymentContext<'static> {
