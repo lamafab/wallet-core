@@ -11,3 +11,4 @@ version = "0.2.0"
 [dependencies]
 tw_proto = { path = "../tw_proto" }
 breez-sdk-core = { path = "breez-sdk/libs/sdk-core"}
+prost = "^0.11"

@@ -5,8 +5,8 @@ option java_package = "wallet.core.jni.proto";
 
 message ReceivePaymentRequest {
     ReceivePaymentParams payment_request = 1;
-    bytes proto_lsp_info = 2;
-    bytes proto_node_peers = 3;
+    bytes blob_lsp_info = 2;
+    bytes blob_node_peers = 3;
     uint64 node_state_inbound_liquidity = 4;
 }
 

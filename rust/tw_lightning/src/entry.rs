@@ -1,5 +1,8 @@
-use crate::Result;
+use crate::{mapping, Result};
+use breez_sdk_core::airgap::grpc_primitives::{breez as breez_grpc, greenlight};
 use breez_sdk_core::airgap::receive_payment;
+use breez_sdk_core::LspInformation;
+use prost::Message;
 use tw_proto::Lightning::Proto;
 
 pub struct LightningEntry;
@@ -18,15 +21,35 @@ impl LightningEntry {
     pub fn prepare_payment_request_invoice_impl(
         proto: Proto::ReceivePaymentRequest,
     ) -> Result<Proto::ReceivePaymentContext> {
-        /*
-        let context = receive_payment::prepare_invoice(
-            req,
-            lsp_info,
-            node_peers,
-            node_state_inbound_liquidity_msats
-        );
-        */
+        let Proto::ReceivePaymentRequest {
+            payment_request,
+            blob_lsp_info,
+            blob_node_peers,
+            node_state_inbound_liquidity,
+        } = proto;
 
-        todo!()
+        // Map protobuf types.
+        let req = mapping::receive_payment_request_from_proto(payment_request.unwrap()).unwrap();
+
+        // TODO:
+        let id = "".to_string();
+        let proto_lsp_info =
+            <breez_grpc::LspInformation as Message>::decode(blob_lsp_info.as_ref()).unwrap();
+        let lsp_info = mapping::lsp_information_from_proto(id, proto_lsp_info).unwrap();
+
+        let proto_node_peers =
+            <greenlight::ListpeersResponse as Message>::decode(blob_node_peers.as_ref()).unwrap();
+
+        // Create and return prepared invoice context
+        let ctx = receive_payment::prepare_invoice(
+            req,
+            &lsp_info,
+            proto_node_peers,
+            node_state_inbound_liquidity,
+        )
+        .unwrap();
+
+        let proto = mapping::proto_receive_payment_context_from_native(ctx);
+        Ok(proto)
     }
 }
