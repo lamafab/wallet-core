@@ -59,8 +59,9 @@ impl LightningEntry {
 
     pub fn check_lsp_hints_impl(
         proto: Proto::ReceivePaymentCheckLspHints,
-    ) -> Result<Proto::ReceivePaymentContext> {
+    ) -> Result<Option<Proto::SignedInvoiceWithLspHint>> {
         let Proto::ReceivePaymentCheckLspHints {
+            private_key,
             invoice,
             payment_request,
             context,
@@ -87,9 +88,22 @@ impl LightningEntry {
                 .unwrap();
 
         if let Some(raw_invoice) = try_raw_invoice {
-            todo!()
-        }
+            if private_key.is_empty() {
+                panic!()
+            }
 
-        todo!()
+            let secret_key =
+                bitcoin::secp256k1::SecretKey::from_slice(private_key.as_ref()).unwrap();
+
+            let new_invoice = super::modules::sign_invoice::sign_invoice(raw_invoice, secret_key)
+                .unwrap()
+                .to_string();
+
+            Ok(Some(Proto::SignedInvoiceWithLspHint {
+                invoice: new_invoice.into(),
+            }))
+        } else {
+            Ok(None)
+        }
     }
 }

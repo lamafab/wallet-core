@@ -13,7 +13,7 @@ From: vls-core
 
 ```
  */
-fn sign_invoice(invoice: RawInvoice, secret_key: SecretKey) -> Result<SignedRawInvoice, ()> {
+pub fn sign_invoice(invoice: RawInvoice, secret_key: SecretKey) -> Result<SignedRawInvoice, ()> {
     let hrp_bytes = invoice.hrp.to_string().as_bytes().to_vec();
     let data_bytes = invoice.data.to_base32();
 
@@ -36,7 +36,7 @@ fn sign_invoice(invoice: RawInvoice, secret_key: SecretKey) -> Result<SignedRawI
 }
 
 /// Construct the invoice's HRP and signatureless data into a preimage to be hashed.
-pub fn construct_invoice_preimage(hrp_bytes: &[u8], data_without_signature: &[u5]) -> Vec<u8> {
+fn construct_invoice_preimage(hrp_bytes: &[u8], data_without_signature: &[u5]) -> Vec<u8> {
     let mut preimage = Vec::<u8>::from(hrp_bytes);
 
     let mut data_part = Vec::from(data_without_signature);

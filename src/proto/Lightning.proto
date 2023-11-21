@@ -56,16 +56,21 @@ message ReceivePaymentContext {
 }
 
 message ReceivePaymentCheckLspHints {
-    string invoice  = 1;
-    ReceivePaymentParams payment_request = 2;
-    ReceivePaymentContext context = 3;
-    bytes proto_lsp_info = 4;
+    bytes private_key = 1;
+    string invoice  = 2;
+    ReceivePaymentParams payment_request = 3;
+    ReceivePaymentContext context = 4;
+    bytes proto_lsp_info = 5;
 }
 
 message ReceivePaymentCheckRegistration {
     string invoice = 1;
     ReceivePaymentParams payment_request = 2;
     ReceivePaymentContext context = 3;
+}
+
+message SignedInvoiceWithLspHint {
+    string invoice = 1;
 }
 
 message SendPaymentRequest {
