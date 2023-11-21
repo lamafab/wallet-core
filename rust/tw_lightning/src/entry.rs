@@ -47,7 +47,7 @@ impl LightningEntry {
         // Create and return prepared invoice context.
         let ctx = receive_payment::prepare_invoice(
             req,
-            &lsp_info,
+            lsp_info,
             proto_node_peers,
             node_state_inbound_liquidity,
         )
@@ -83,6 +83,7 @@ impl LightningEntry {
         )
         .unwrap();
 
+        // Check wheter the invoice must be updated to include LSP hints.
         let try_raw_invoice =
             receive_payment::check_lsp_hints(invoice.to_string(), &req, &context, &lsp_info)
                 .unwrap();
@@ -92,9 +93,11 @@ impl LightningEntry {
                 panic!()
             }
 
+            // Prepare secret key for signing.
             let secret_key =
                 bitcoin::secp256k1::SecretKey::from_slice(private_key.as_ref()).unwrap();
 
+            // Sign the updated invoice.
             let new_invoice = super::modules::sign_invoice::sign_invoice(raw_invoice, secret_key)
                 .unwrap()
                 .to_string();
@@ -119,15 +122,29 @@ impl LightningEntry {
         // Map protobuf types into the native type.
         let req = mapping::receive_payment_request_from_proto(payment_request.unwrap()).unwrap();
 
+        let Some(context) = context else { panic!() };
+
+        let lsp_id = context.lsp_id.to_string();
+        let lsp_pubkey = context.lsp_pubkey.to_string();
+
         // Map protobuf types into the native type.
-        let ctx = receive_payment_context_from_proto(context.unwrap());
+        let context = receive_payment_context_from_proto(context);
 
-        if let Some(Payment_info) =
-            receive_payment::check_payment_registration(invoice.as_ref(), &req, &ctx).unwrap()
-        {
-            let params = mapping::proto_lsp_payment_registration_params_from_native(lsp_id, lsp_pubkey, payment_info);
+        // Check whether the invoice must be registered with the LSP.
+        let try_payment_info =
+            receive_payment::check_payment_registration(invoice.as_ref(), &req, &context).unwrap();
+
+        if let Some(payment_info) = try_payment_info {
+            // Map native types to protobuf.
+            let params = mapping::proto_lsp_payment_registration_params_from_native(
+                lsp_id,
+                lsp_pubkey,
+                payment_info,
+            );
+
+            Ok(Some(params))
+        } else {
+            Ok(None)
         }
-
-        todo!()
     }
 }

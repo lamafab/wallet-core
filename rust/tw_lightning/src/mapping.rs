@@ -84,15 +84,15 @@ pub fn opening_fee_params_from_proto(proto: Proto::OpeningFeeParams) -> OpeningF
 }
 
 pub fn proto_opening_fee_params_from_native(
-    n: OpeningFeeParams,
+    native: OpeningFeeParams,
 ) -> Proto::OpeningFeeParams<'static> {
     Proto::OpeningFeeParams {
-        min_msat: n.min_msat,
-        proportional: n.proportional,
-        valid_until: n.valid_until.into(),
-        max_idle_time: n.max_idle_time,
-        max_client_to_self_delay: n.max_client_to_self_delay,
-        promise: n.promise.into(),
+        min_msat: native.min_msat,
+        proportional: native.proportional,
+        valid_until: native.valid_until.into(),
+        max_idle_time: native.max_idle_time,
+        max_client_to_self_delay: native.max_client_to_self_delay,
+        promise: native.promise.into(),
     }
 }
 
@@ -106,6 +106,8 @@ pub fn receive_payment_context_from_proto(
     };
 
     PreparedInvoiceContext {
+        lsp_id: proto.lsp_id.to_string(),
+        lsp_pubkey: proto.lsp_pubkey.to_string(),
         short_channel_id: proto.short_channel_id,
         destination_invoice_amount_msat: proto.destination_invoice_amount_msat,
         channel_opening_fee_params,
@@ -118,20 +120,15 @@ pub fn receive_payment_context_from_proto(
 pub fn proto_receive_payment_context_from_native(
     native: PreparedInvoiceContext,
 ) -> Proto::ReceivePaymentContext<'static> {
-    let channel_opening_fee_params = if let Some(p) = native.channel_opening_fee_params {
-        Some(Proto::OpeningFeeParams {
-            min_msat: p.min_msat,
-            proportional: p.proportional,
-            valid_until: p.valid_until.into(),
-            max_idle_time: p.max_idle_time,
-            max_client_to_self_delay: p.max_client_to_self_delay,
-            promise: p.promise.into(),
-        })
+    let channel_opening_fee_params = if let Some(params) = native.channel_opening_fee_params {
+        Some(proto_opening_fee_params_from_native(params))
     } else {
         None
     };
 
     Proto::ReceivePaymentContext {
+        lsp_id: native.lsp_id.into(),
+        lsp_pubkey: native.lsp_pubkey.into(),
         short_channel_id: native.short_channel_id,
         destination_invoice_amount_msat: native.destination_invoice_amount_msat,
         channel_opening_fee_params,
@@ -143,9 +140,9 @@ pub fn proto_receive_payment_context_from_native(
 pub fn proto_lsp_payment_registration_params_from_native(
     lsp_id: String,
     lsp_pubkey: String,
-    n: PaymentInfo,
+    native: PaymentInfo,
 ) -> Proto::LspPaymentRegistrationParams<'static> {
-    let opening_fee_params = if let Some(params) = n.opening_fee_params {
+    let opening_fee_params = if let Some(params) = native.opening_fee_params {
         Some(proto_opening_fee_params_from_native(params))
     } else {
         None
@@ -154,11 +151,11 @@ pub fn proto_lsp_payment_registration_params_from_native(
     Proto::LspPaymentRegistrationParams {
         lsp_id: lsp_id.into(),
         lsp_pubkey: lsp_pubkey.into(),
-        payment_hash: n.payment_hash.into(),
-        payment_secret: n.payment_secret.into(),
-        destination: n.destination.into(),
-        incoming_amount_msat: n.incoming_amount_msat,
-        outgoing_amount_msat: n.outgoing_amount_msat,
+        payment_hash: native.payment_hash.into(),
+        payment_secret: native.payment_secret.into(),
+        destination: native.destination.into(),
+        incoming_amount_msat: native.incoming_amount_msat,
+        outgoing_amount_msat: native.outgoing_amount_msat,
         opening_fee_params,
     }
 }

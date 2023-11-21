@@ -46,13 +46,15 @@ message OpeningFeeParams {
 }
 
 message ReceivePaymentContext {
-    uint64 short_channel_id = 1;
-    uint64 destination_invoice_amount_msat = 2;
+    string lsp_id = 1;
+    string lsp_pubkey = 2;
+    uint64 short_channel_id = 3;
+    uint64 destination_invoice_amount_msat = 4;
     // (Optional)
-    OpeningFeeParams channel_opening_fee_params = 3;
-    bool open_channel_needed = 4;
+    OpeningFeeParams channel_opening_fee_params = 5;
+    bool open_channel_needed = 6;
     // (Optional)
-    uint64 channel_fees_msat = 5;
+    uint64 channel_fees_msat = 7;
 }
 
 message ReceivePaymentCheckLspHints {
