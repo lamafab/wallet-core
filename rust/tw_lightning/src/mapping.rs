@@ -1,6 +1,6 @@
 use super::Result;
 use breez_sdk_core::airgap::grpc_primitives::breez as breez_grpc;
-use breez_sdk_core::airgap::receive_payment::PreparedInvoiceContext;
+use breez_sdk_core::airgap::receive_payment::{PaymentInfo, PreparedInvoiceContext};
 use breez_sdk_core::{
     LspInformation, OpeningFeeParams, OpeningFeeParamsMenu, ReceivePaymentRequest,
 };
@@ -83,6 +83,19 @@ pub fn opening_fee_params_from_proto(proto: Proto::OpeningFeeParams) -> OpeningF
     }
 }
 
+pub fn proto_opening_fee_params_from_native(
+    n: OpeningFeeParams,
+) -> Proto::OpeningFeeParams<'static> {
+    Proto::OpeningFeeParams {
+        min_msat: n.min_msat,
+        proportional: n.proportional,
+        valid_until: n.valid_until.into(),
+        max_idle_time: n.max_idle_time,
+        max_client_to_self_delay: n.max_client_to_self_delay,
+        promise: n.promise.into(),
+    }
+}
+
 pub fn receive_payment_context_from_proto(
     proto: Proto::ReceivePaymentContext,
 ) -> PreparedInvoiceContext {
@@ -92,16 +105,14 @@ pub fn receive_payment_context_from_proto(
         None
     };
 
-    let ctx = PreparedInvoiceContext {
+    PreparedInvoiceContext {
         short_channel_id: proto.short_channel_id,
         destination_invoice_amount_msat: proto.destination_invoice_amount_msat,
         channel_opening_fee_params,
         open_channel_needed: proto.open_channel_needed,
         // TODO: Needs a `use_channel_fees_msat` param.
         channel_fees_msat: Some(proto.channel_fees_msat),
-    };
-
-    todo!()
+    }
 }
 
 pub fn proto_receive_payment_context_from_native(
@@ -126,5 +137,28 @@ pub fn proto_receive_payment_context_from_native(
         channel_opening_fee_params,
         open_channel_needed: native.open_channel_needed,
         channel_fees_msat: native.channel_fees_msat.unwrap_or(0),
+    }
+}
+
+pub fn proto_lsp_payment_registration_params_from_native(
+    lsp_id: String,
+    lsp_pubkey: String,
+    n: PaymentInfo,
+) -> Proto::LspPaymentRegistrationParams<'static> {
+    let opening_fee_params = if let Some(params) = n.opening_fee_params {
+        Some(proto_opening_fee_params_from_native(params))
+    } else {
+        None
+    };
+
+    Proto::LspPaymentRegistrationParams {
+        lsp_id: lsp_id.into(),
+        lsp_pubkey: lsp_pubkey.into(),
+        payment_hash: n.payment_hash.into(),
+        payment_secret: n.payment_secret.into(),
+        destination: n.destination.into(),
+        incoming_amount_msat: n.incoming_amount_msat,
+        outgoing_amount_msat: n.outgoing_amount_msat,
+        opening_fee_params,
     }
 }

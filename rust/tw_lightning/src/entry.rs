@@ -106,4 +106,28 @@ impl LightningEntry {
             Ok(None)
         }
     }
+
+    pub fn check_payment_registration_impl(
+        proto: Proto::ReceivePaymentCheckRegistration,
+    ) -> Result<Option<Proto::LspPaymentRegistrationParams>> {
+        let Proto::ReceivePaymentCheckRegistration {
+            invoice,
+            payment_request,
+            context,
+        } = proto;
+
+        // Map protobuf types into the native type.
+        let req = mapping::receive_payment_request_from_proto(payment_request.unwrap()).unwrap();
+
+        // Map protobuf types into the native type.
+        let ctx = receive_payment_context_from_proto(context.unwrap());
+
+        if let Some(Payment_info) =
+            receive_payment::check_payment_registration(invoice.as_ref(), &req, &ctx).unwrap()
+        {
+            let params = mapping::proto_lsp_payment_registration_params_from_native(lsp_id, lsp_pubkey, payment_info);
+        }
+
+        todo!()
+    }
 }
